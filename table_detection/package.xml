@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package>
+
+  <name>table_detection</name>
+  <version>0.0.0</version>
+  <description>The table_detection package.</description>
+
+  <maintainer email="hauffn@informatik.uni-freiburg.de">Nico Hauff</maintainer>
+  <author email="hauffn@informatik.uni-freiburg.de">Nico Hauff</author>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  
+  <run_depend>roscpp</run_depend>
+
+</package>
