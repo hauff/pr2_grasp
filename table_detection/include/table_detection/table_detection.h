@@ -67,6 +67,8 @@ private:
   tf2_ros::TransformListener tf_listener_;
   rviz_visual_tools::RvizVisualToolsPtr visual_tools_ptr_;
 
+  ros::Publisher pub_marker_;
+
 };
 
 }

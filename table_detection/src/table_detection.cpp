@@ -14,12 +14,15 @@
 
 #include <eigen_conversions/eigen_msg.h>
 
+#include <visualization_msgs/Marker.h>
+
 namespace table_detection
 {
 
 TableDetection::TableDetection() : tf_listener_(tf_buffer_)
 {
-  cloud_topic_in_ = "/head_mount_kinect/depth_registered/points";
+  //cloud_topic_in_ = "/head_mount_kinect/depth_registered/points";
+  cloud_topic_in_ = "/camera/depth_registered/points";
   voxel_grid_size_ = 0.02;
   crop_box_.resize(6);
   crop_box_ << 0, 2, -1, 1, 0.1, 1;
@@ -34,12 +37,14 @@ TableDetection::TableDetection() : tf_listener_(tf_buffer_)
   cloud_filtered_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_bounds_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
 
-  visual_tools_ptr_.reset(new rviz_visual_tools::RvizVisualTools("head_mount_kinect_rgb_optical_frame", "/table_detection"));
+  visual_tools_ptr_.reset(new rviz_visual_tools::RvizVisualTools("odom_combined", "/table_detection"));
   visual_tools_ptr_->setLifetime(2);
   visual_tools_ptr_->setAlpha(0.5);
 
   sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(
-    cloud_topic_in_, 100, &TableDetection::cloud_callback, this);
+    cloud_topic_in_, 10, &TableDetection::cloud_callback, this);
+
+  pub_marker_ = nh_public_.advertise<visualization_msgs::Marker>("table_detection_bla", 10);
 }
 
 void TableDetection::cloud_callback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
@@ -50,7 +55,6 @@ void TableDetection::cloud_callback(const sensor_msgs::PointCloud2::ConstPtr& cl
   inlier_ptr_->indices.clear();
 
   transform(cloud_msg_ptr);
-
   downsample();
   cropBox();
   estimatePlaneCoeffs();
@@ -193,16 +197,24 @@ void TableDetection::computeWorkspace()
   ws_min = transform_.inverse() * ws_min;
   ws_max = transform_.inverse() * ws_max;
 
-  std::cout << transform_.inverse().matrix() << std::endl;
+  //pcl::PointCloud<pcl::PointXYZ> c;
+  //c.push_back(pcl::PointXYZ());
 
+  //pcl::transformPointCloud (*source_cloud, *transformed_cloud, transform_2);
+
+  //std::cout << transform_.inverse().matrix() << std::endl;
+  /*
   ROS_INFO("ws:       %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
     ws_min.x(), ws_max.x(), ws_min.y(), ws_max.y(), ws_min.z(), ws_max.z());
 
   ROS_INFO("ws above: %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
     ws_above_min.x(), ws_above_max.x(), ws_above_min.y(), ws_above_max.y(), ws_above_min.z(), ws_above_max.z());
+  */
+  workspace_min_ = ws_min.head(3).cast<float>();
+  workspace_max_ = ws_max.head(3).cast<float>();
 
-  workspace_min_ = ws_above_min.head(3).cast<float>();
-  workspace_max_ = ws_above_max.head(3).cast<float>();
+  std::cout << workspace_min_ << std::endl;
+  std::cout << workspace_max_ << std::endl;
 }
 
 void TableDetection::publishMarkers()
@@ -217,15 +229,46 @@ void TableDetection::publishMarkers()
     bounds.points.push_back(p);
   }
 
-  visual_tools_ptr_->enableBatchPublishing();
 
-  visual_tools_ptr_->publishPolygon(bounds, rviz_visual_tools::GREEN, rviz_visual_tools::REGULAR,
-    "bounds");
+  //visual_tools_ptr_->enableBatchPublishing();
 
-  visual_tools_ptr_->publishCuboid(workspace_min_.cast<double>(), workspace_max_.cast<double>(),
-    rviz_visual_tools::BLUE);
+  //visual_tools_ptr_->publishPolygon(bounds, rviz_visual_tools::GREEN, rviz_visual_tools::REGULAR,
+  //"bounds");
 
-  visual_tools_ptr_->triggerBatchPublishAndDisable();
+  //visual_tools_ptr_->publishCuboid(workspace_min_.cast<double>(), workspace_max_.cast<double>(),
+    //rviz_visual_tools::BLUE);
+
+  //visual_tools_ptr_->triggerBatchPublishAndDisable();
+
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "head_mount_asus_rgb_optical_frame";
+  marker.header.stamp = ros::Time::now();
+
+  marker.ns = "ws";
+  marker.id = 0;
+  marker.type = visualization_msgs::Marker::CUBE;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  Eigen::Vector3f pos = 0.5 * (workspace_max_ + workspace_min_);
+
+  marker.pose.position.x = pos.x();
+  marker.pose.position.y = pos.y();
+  marker.pose.position.z = pos.z();
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+  marker.scale.x = workspace_max_.x() - workspace_min_.x();
+  marker.scale.y = workspace_max_.y() - workspace_min_.y();
+  marker.scale.z = workspace_max_.z() - workspace_min_.z();
+  marker.color.r = 0.0f;
+  marker.color.g = 1.0f;
+  marker.color.b = 0.0f;
+  marker.color.a = 1.0;
+
+  marker.lifetime = ros::Duration(1);
+
+  pub_marker_.publish(marker);
 }
 
 }

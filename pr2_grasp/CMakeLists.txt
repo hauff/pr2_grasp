@@ -25,8 +25,8 @@ add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES table_detection
-# CATKIN_DEPENDS roscpp
+#  LIBRARIES table_detection
+  CATKIN_DEPENDS roscpp table_detection
 # DEPENDS system_lib
 )
 
