@@ -1,16 +1,23 @@
-cmake_minimum_required(VERSION 2.8.12)
-project(table_detection)
+cmake_minimum_required(VERSION 2.8.3)
+project(pr2_grasp)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   tf2_ros
   tf2_sensor_msgs
+  tf2_geometry_msgs
   sensor_msgs
   geometry_msgs
   visualization_msgs
   pcl_conversions
   eigen_conversions
-  rviz_visual_tools
+
+  moveit_core
+  moveit_ros_planning
+  moveit_ros_planning_interface
+  gpd
+
+  table_detection
 )
 
 find_package(PCL 1.8 REQUIRED)
@@ -29,8 +36,5 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
 )
 
-add_library(table_detection src/table_detection.cpp)
-target_link_libraries(table_detection ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-
-add_executable(table_detection_node src/table_detection_node.cpp)
-target_link_libraries(table_detection_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} table_detection)
+add_executable(pr2_grasp_node src/pr2_grasp_node.cpp)
+target_link_libraries(pr2_grasp_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
