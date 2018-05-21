@@ -22,7 +22,7 @@ public:
 
 private:
 
-  void cloud_callback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr);
+  void cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr);
 
   void transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr);
 

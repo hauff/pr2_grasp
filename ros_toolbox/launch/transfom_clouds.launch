@@ -1,0 +1,11 @@
+<launch>
+
+  <node name="transform_clouds" pkg="ros_toolbox" type="transform_clouds_node" ns="ros_toolbox" output="screen">
+    <!--<param name="topic_in" value="/camera/depth_registered/points"/>-->
+    <param name="topic_in" value="/head_mount_kinect/depth_registered/points"/>
+    <!--<param name="topic_out" value="/camera/depth_registered/points/odom_combined"/>-->
+    <param name="topic_out" value="/head_mount_kinect/depth_registered/points/odom_combined"/>
+    <param name="target_frame" value="odom_combined"/>
+  </node>
+
+</launch>
