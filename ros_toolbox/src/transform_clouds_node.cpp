@@ -6,9 +6,9 @@
 #include <geometry_msgs/Vector3.h>
 
 const std::string ns = "ros_toolbox";
-const std::string name = "transform_clouds";
+const std::string name = "transform_clouds_node";
 
-bool compareVectors(const geometry_msgs::Vector3& vec1, const geometry_msgs::Vector3& vec2,
+bool compareTwoVectors(const geometry_msgs::Vector3& vec1, const geometry_msgs::Vector3& vec2,
   double epsilon = 1e-3)
 {
   return
@@ -37,9 +37,9 @@ void callback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr, tf2_ros::
     return;
   }
 
-  if (!compareVectors(prev_sensor_position, sensor_position))
+  if (!compareTwoVectors(prev_sensor_position, sensor_position))
   {
-    ROS_INFO("[%s/%s]: Sensor position: %.3f, %.3f, %.3f", ns.c_str(), name.c_str(),
+    ROS_INFO("[%s::%s]: Sensor position: %.3f, %.3f, %.3f", ns.c_str(), name.c_str(),
      sensor_position.x, sensor_position.y, sensor_position.z);
 
     prev_sensor_position = sensor_position;
