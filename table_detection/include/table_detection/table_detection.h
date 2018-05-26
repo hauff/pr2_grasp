@@ -20,6 +20,8 @@ public:
 
   TableDetection();
 
+  void detect(const sensor_msgs::PointCloud2& cloud_msg);
+
 private:
 
   void cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr);

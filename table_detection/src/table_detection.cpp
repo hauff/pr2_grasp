@@ -30,13 +30,32 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
   cloud_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_filtered_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_bounds_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
-
+/*
   sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(
     cloud_topic_in_, 10, &TableDetection::cloudCallback, this);
-
+*/
   rviz_visualizer_ptr_.reset(new rviz_visualizer::RvizVisualizer(
     "odom_combined", "markers", nh_private_));
   rviz_visualizer_ptr_->setAlpha(0.5);
+}
+
+void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
+{
+  cloud_ptr_->clear();
+  cloud_filtered_ptr_->clear();
+  cloud_bounds_ptr_->clear();
+  inlier_ptr_->indices.clear();
+
+  pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
+  downsample();
+  cropBox();
+  estimatePlaneCoeffs();
+  extractCluster();
+  projectPointCloudToModel();
+  computeConvexHull();
+  computeWorkspace();
+
+  publishMarkers();
 }
 
 void TableDetection::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)

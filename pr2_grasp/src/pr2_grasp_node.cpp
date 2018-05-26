@@ -1,18 +1,139 @@
 #include <table_detection/table_detection.h>
 #include <ros/ros.h>
+#include <ros/package.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Vector3.h>
+
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+
+#include <gpd/SetParameters.h>
+//#include <gpd/CloudSources.h>
+//#include <gpd/CloudIndexed.h>
+//#include <gpd/GraspConfigList.h>
+
+//#include <gpg/cloud_camera.h>
+//#include <gpd/grasp_detector.h>
+//#include <gpg/grasp.h>
+
+const std::string ns = "pr2_grasp";
+const std::string name = "pr2_grasp_node";
+
+
+bool transform_cloud(tf2_ros::Buffer& tf_buffer, const sensor_msgs::PointCloud2& cloud_msg_in,
+  sensor_msgs::PointCloud2& cloud_msg_out, geometry_msgs::Vector3& sensor_pos)
+{
+  try
+  {
+    geometry_msgs::TransformStamped ts = tf_buffer.lookupTransform(
+      "odom_combined", cloud_msg_in.header.frame_id, cloud_msg_in.header.stamp);
+
+    tf2::doTransform(cloud_msg_in, cloud_msg_out, ts);
+    sensor_pos = ts.transform.translation;
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN("%s", ex.what());
+    return false;
+  }
+
+  return true;
+}
+
+void callback_clouds(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
+  tf2_ros::Buffer& tf_buffer, sensor_msgs::PointCloud2& cloud_msg,
+  geometry_msgs::Vector3& sensor_pos)
+{
+  ROS_INFO("[%s::%s]: Recived point cloud.", ns.c_str(), name.c_str());
+  transform_cloud(tf_buffer, *cloud_msg_ptr, cloud_msg, sensor_pos);
+}
+
+/*
+void detect_grasps(ros::NodeHandle& nh_private, const sensor_msgs::PointCloud2& cloud_msg)
+{
+  nh_private.setParam("hand_outer_diameter", 0.12);
+  nh_private.setParam("num_threads", 4);
+  double tmp[] = {1,1,1,1,1,1};
+  std::vector<double> ws(tmp, tmp + sizeof(tmp) / sizeof(tmp[0]));
+  nh_private.setParam("workspace", ws);
+  nh_private.setParam("workspace_grasps", ws);
+
+  std::string gpd_path = ros::package::getPath("gpd");
+  nh_private.setParam("model_file", gpd_path + "/caffe/15channels/lenet_15_channels.prototxt");
+  nh_private.setParam("trained_file", gpd_path + "/caffe/15channels/two_views_15_channels_53_deg.caffemodel");
+
+  nh_private.setParam("min_inliers", 1);
+
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGBA>());
+  pcl::fromROSMsg(cloud_msg, *cloud_ptr);
+  Eigen::Matrix3Xd view_point(3,1);
+  view_point.col(0) << 0, 0, 1.5;
+  CloudCamera cloud_camera(cloud_ptr, 0, view_point);
+
+  GraspDetector grasp_detector(nh_private);
+  grasp_detector.preprocessPointCloud(cloud_camera);
+  //std::vector<Grasp> grasps = grasp_detector.detectGrasps(cloud_camera);
+
+  //std::cout << grasps.size() << std::endl;
+}
+*/
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "pr2_grasp");
-  ros::NodeHandle nh_public;
+  ros::NodeHandle nh_public, nh_private("~");
 
-  std::string topic_in = "/detect_grasps/clustered_grasps";
+  std::string topic_clouds_in = "/head_mount_kinect/depth_registered/points";
+  std::string topic_clouds_out = "/head_mount_kinect/depth_registered/points/odom_combined";
 
-  //table_detection::TableDetection table_detection;
+  tf2_ros::Buffer tf_buffer;
+  tf2_ros::TransformListener tf_listener(tf_buffer);
 
-  //ros::spin();
+  geometry_msgs::Vector3 sensor_pos;
+  sensor_msgs::PointCloud2 cloud_msg;
+  ros::Subscriber sub_clouds = nh_public.subscribe<sensor_msgs::PointCloud2>(topic_clouds_in, 1,
+    boost::bind(callback_clouds, _1, boost::ref(tf_buffer), boost::ref(cloud_msg),
+    boost::ref(sensor_pos)));
 
-  ROS_INFO("hello world");
+  ros::Publisher pub_clouds = nh_public.advertise<sensor_msgs::PointCloud2>(topic_clouds_out, 1);
+
+  ros::ServiceClient client_gpd_set_params = nh_public.serviceClient<gpd::SetParameters>("/gpd/set_params");
+
+  table_detection::TableDetection table_detection;
+
+  ros::Rate rate(10);
+  while (ros::ok())
+  {
+    cloud_msg.data.clear();
+    ros::spinOnce();
+
+    if (cloud_msg.data.empty())
+      continue;
+
+    gpd::SetParameters set_params_srv;
+    set_params_srv.request.set_camera_position = true;
+    set_params_srv.request.camera_position[0] = 0;
+    set_params_srv.request.camera_position[1] = 0;
+    set_params_srv.request.camera_position[2] = 1.5;
+    bool success = client_gpd_set_params.call(set_params_srv);
+
+    //table_detection.detect(cloud_msg);
+
+    //detect_grasps(nh_private, cloud_msg);
+
+    pub_clouds.publish(cloud_msg);
+
+
+    sleep(60);
+
+    rate.sleep();
+  }
+
+  return EXIT_SUCCESS;
 }
 
 /*
