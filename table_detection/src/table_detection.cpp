@@ -16,7 +16,7 @@ namespace table_detection
 TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 {
   //cloud_topic_in_ = "/head_mount_kinect/depth_registered/points";
-  cloud_topic_in_ = "/camera/depth_registered/points";
+  //cloud_topic_in_ = "/camera/depth_registered/points";
   voxel_grid_size_ = 0.02;
   crop_box_.resize(6);
   crop_box_ << 0, 2, -1, 1, 0.1, 1;
@@ -42,12 +42,12 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 
 void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 {
-  cloud_ptr_->clear();
+  pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
+
   cloud_filtered_ptr_->clear();
   cloud_bounds_ptr_->clear();
   inlier_ptr_->indices.clear();
 
-  pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
   downsample();
   cropBox();
   estimatePlaneCoeffs();
@@ -61,33 +61,20 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 
 void TableDetection::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
 {
-  cloud_ptr_->clear();
-  cloud_filtered_ptr_->clear();
-  cloud_bounds_ptr_->clear();
-  inlier_ptr_->indices.clear();
+  sensor_msgs::PointCloud2 cloud_msg;
 
-  transform(cloud_msg_ptr);
-  downsample();
-  cropBox();
-  estimatePlaneCoeffs();
-  extractCluster();
-  projectPointCloudToModel();
-  computeConvexHull();
-  computeWorkspace();
-
-  publishMarkers();
+  transform(cloud_msg_ptr, cloud_msg);
+  detect(cloud_msg);
 }
 
-void TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
+void TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
+  sensor_msgs::PointCloud2& cloud_msg)
 {
   try
   {
     geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
       "odom_combined", cloud_msg_ptr->header.frame_id, cloud_msg_ptr->header.stamp);
-
-    sensor_msgs::PointCloud2 cloud_msg;
     tf2::doTransform(*cloud_msg_ptr, cloud_msg, transform);
-    pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
   }
   catch (tf2::TransformException &ex)
   {

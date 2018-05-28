@@ -1,4 +1,6 @@
 #include <table_detection/table_detection.h>
+#include <planning_scene_manager/planning_scene_manager.h>
+
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <tf2_ros/transform_listener.h>
@@ -88,50 +90,6 @@ void set_gpd_params(ros::NodeHandle& nh_public, const Eigen::Vector3d& sensor_po
   bool success = client_gpd.call(set_params_srv);
 }
 
-void add_collision_object(ros::NodeHandle& nh_public, const geometry_msgs::Point& position)
-{
-  moveit_msgs::CollisionObject object;
-  object.header.frame_id = "odom_combined";
-  object.id = "object";
-  object.operation = moveit_msgs::CollisionObject::ADD;
-
-  object.primitives.resize(1);
-  object.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
-  object.primitives[0].dimensions.resize(3);
-  object.primitives[0].dimensions[0] = 0.2;
-  object.primitives[0].dimensions[1] = 0.2;
-  object.primitives[0].dimensions[2] = 0.2;
-
-  object.primitive_poses.resize(1);
-  object.primitive_poses[0].orientation.w = 1;
-  object.primitive_poses[0].position = position;
-  //tf::poseEigenToMsg(workspace.pose, object.primitive_poses[0]);
-
-  ros::ServiceClient client_get_ps = nh_public.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
-  moveit_msgs::GetPlanningScene get_ps_srv;
-  get_ps_srv.request.components.components = moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX;
-  bool success = client_get_ps.call(get_ps_srv);
-  moveit_msgs::AllowedCollisionMatrix acm = get_ps_srv.response.scene.allowed_collision_matrix;
-
-
-  moveit_msgs::PlanningScene planning_scene;
-  planning_scene.world.collision_objects.push_back(object);
-  planning_scene.is_diff = true;
-
-  if (acm.default_entry_names.size() == 0)
-  {
-    acm.default_entry_names.push_back("object");
-    acm.default_entry_values.push_back(1);
-  }
-  planning_scene.allowed_collision_matrix = acm;
-
-  ros::ServiceClient client_ps_diff = nh_public.serviceClient<moveit_msgs::ApplyPlanningScene>("apply_planning_scene");
-  client_ps_diff.waitForExistence();
-  moveit_msgs::ApplyPlanningScene service;
-  service.request.scene = planning_scene;
-  client_ps_diff.call(service);
-}
-
 bool quaternion_from_column_vectors(const geometry_msgs::Vector3& col_0, const geometry_msgs::Vector3& col_1,
   const geometry_msgs::Vector3& col_2, geometry_msgs::Quaternion& quaternion)
 {
@@ -147,7 +105,7 @@ bool quaternion_from_column_vectors(const geometry_msgs::Vector3& col_0, const g
 void grasp(const gpd::GraspConfigList& grasp_config_list, ros::NodeHandle& nh_public)
 {
   moveit::planning_interface::MoveGroup group("right_arm");
-  moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+  //moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
 
   //group.setPlanningTime(10);
   group.setGoalTolerance(0.005);
@@ -159,7 +117,7 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, ros::NodeHandle& nh_pu
 
     const gpd::GraspConfig& grasp = grasp_config_list.grasps[i];
 
-    add_collision_object(nh_public, grasp.bottom);
+    // add_collision_object(nh_public, grasp.bottom);
 
     geometry_msgs::Pose target_pose;
     quaternion_from_column_vectors(grasp.approach, grasp.binormal, grasp.axis, target_pose.orientation);
@@ -216,8 +174,11 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "pr2_grasp");
   ros::NodeHandle nh_public, nh_private("~");
 
+  //exit(EXIT_SUCCESS);
+
+  std::string topic_clouds_in = "/move_group/filtered_cloud";
   //std::string topic_clouds_in = "/head_mount_kinect/depth_registered/points";
-  std::string topic_clouds_in = "/camera/depth_registered/points";
+  //std::string topic_clouds_in = "/camera/depth_registered/points";
   //std::string topic_clouds_out = "/head_mount_kinect/depth_registered/points/odom_combined";
   std::string topic_clouds_out = "/filtered_cloud/odom_combined";
   std::string topic_grasps_in = "/detect_grasps/clustered_grasps";
@@ -238,6 +199,7 @@ int main(int argc, char **argv)
   ros::Publisher pub_clouds = nh_public.advertise<sensor_msgs::PointCloud2>(topic_clouds_out, 1);
 
   table_detection::TableDetection table_detection;
+  planning_scene_manager::PlanningSceneManager scene_mgr;
 
   ros::Rate rate(10);
   while (ros::ok())
@@ -253,6 +215,8 @@ int main(int argc, char **argv)
     ROS_INFO("Try to detect table.");
     table_detection.detect(cloud_msg);
     table_detection::Workspace workspace = table_detection.getWorkspace();
+
+    continue;
 
     ROS_INFO("Set gpd parameters and publish point cloud.");
     set_gpd_params(nh_public, sensor_pos, workspace);

@@ -35,7 +35,8 @@ private:
 
   void cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr);
 
-  void transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr);
+  void transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
+    sensor_msgs::PointCloud2& cloud_msg);
 
   void downsample();
 
@@ -68,7 +69,6 @@ private:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_bounds_ptr_;
-  //Eigen::VectorXd workspace_;
   Workspace workspace_;
 
   ros::NodeHandle nh_public_;

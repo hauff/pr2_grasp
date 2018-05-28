@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   gpd
 
   table_detection
+  planning_scene_manager
 )
 
 find_package(PCL 1.8 REQUIRED)
