@@ -10,8 +10,8 @@ RvizVisualizer::RvizVisualizer(const std::string& frame_id, const std::string& t
 {
   frame_id_ = frame_id;
   topic_ = topic;
-  lifetime_ = 1.0;
-  alpha_ = 1.0;
+  lifetime_ = 0;
+  alpha_ = 1;
 
 
   pub_markers_ = nh.advertise<visualization_msgs::MarkerArray>(topic_, 10);

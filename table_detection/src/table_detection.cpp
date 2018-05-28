@@ -15,8 +15,8 @@ namespace table_detection
 
 TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 {
-  cloud_topic_in_ = "/head_mount_kinect/depth_registered/points";
-  //cloud_topic_in_ = "/camera/depth_registered/points";
+  //cloud_topic_in_ = "/head_mount_kinect/depth_registered/points";
+  cloud_topic_in_ = "/camera/depth_registered/points";
   voxel_grid_size_ = 0.02;
   crop_box_.resize(6);
   crop_box_ << 0, 2, -1, 1, 0.1, 1;
@@ -190,7 +190,7 @@ void TableDetection::computeWorkspace()
   Eigen::Vector4f min, max;
   pcl::getMinMax3D(*cloud_filtered_ptr_, *inlier_ptr_, min, max);
 
-  min.z() += 0.05;
+  min.z() += 0.08;
   max.z() += 0.5;
 
   workspace_.frame_id = cloud_filtered_ptr_->header.frame_id;

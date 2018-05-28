@@ -11,7 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   eigen_conversions
   moveit_msgs
-  rviz_visual_tools
   rviz_visualizer
 )
 
@@ -21,7 +20,7 @@ add_definitions(${PCL_DEFINITIONS})
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES table_detection
-  CATKIN_DEPENDS roscpp rviz_visual_tools rviz_visualizer
+  CATKIN_DEPENDS roscpp rviz_visualizer
 # DEPENDS system_lib
 )
 
