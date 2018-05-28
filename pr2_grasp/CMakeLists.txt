@@ -24,17 +24,10 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(PCL 1.8 REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 
-find_package(Caffe REQUIRED)
-include_directories(${Caffe_INCLUDE_DIRS})
-add_definitions(${Caffe_DEFINITIONS})
-
-find_library(GENERATOR_LIB grasp_candidates_generator)
-find_path(GENERATOR_LIB_INCLUDE_DIR gpg/grasp.h)
-
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES table_detection
-  CATKIN_DEPENDS cmake_modules roscpp gpd table_detection
+  CATKIN_DEPENDS roscpp gpd table_detection
 # DEPENDS system_lib
 )
 
@@ -42,8 +35,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
-  ${GENERATOR_LIB_INCLUDE_DIR}
 )
 
 add_executable(pr2_grasp_node src/pr2_grasp_node.cpp)
-target_link_libraries(pr2_grasp_node gpd_grasp_detector ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${GENERATOR_LIB})
+target_link_libraries(pr2_grasp_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})

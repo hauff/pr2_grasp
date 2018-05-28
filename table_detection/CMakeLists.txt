@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   visualization_msgs
   pcl_conversions
   eigen_conversions
+  moveit_msgs
   rviz_visual_tools
   rviz_visualizer
 )

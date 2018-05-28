@@ -13,6 +13,13 @@
 namespace table_detection
 {
 
+struct Workspace
+{
+  std::string frame_id;
+  Eigen::Affine3d pose;
+  Eigen::Vector3d scale;
+};
+
 class TableDetection
 {
 
@@ -21,6 +28,8 @@ public:
   TableDetection();
 
   void detect(const sensor_msgs::PointCloud2& cloud_msg);
+
+  Workspace getWorkspace() { return workspace_; }
 
 private:
 
@@ -59,8 +68,8 @@ private:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_bounds_ptr_;
-  Eigen::Vector3d workspace_min_;
-  Eigen::Vector3d workspace_max_;
+  //Eigen::VectorXd workspace_;
+  Workspace workspace_;
 
   ros::NodeHandle nh_public_;
   ros::NodeHandle nh_private_;

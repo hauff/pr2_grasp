@@ -30,6 +30,7 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
   cloud_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_filtered_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_bounds_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
+
 /*
   sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(
     cloud_topic_in_, 10, &TableDetection::cloudCallback, this);
@@ -189,8 +190,13 @@ void TableDetection::computeWorkspace()
   Eigen::Vector4f min, max;
   pcl::getMinMax3D(*cloud_filtered_ptr_, *inlier_ptr_, min, max);
 
-  workspace_min_ << min.x(), min.y(), min.z() - inlier_thresh_;
-  workspace_max_ << max.x(), max.y(), max.z() + 0.5;
+  min.z() += 0.05;
+  max.z() += 0.5;
+
+  workspace_.frame_id = cloud_filtered_ptr_->header.frame_id;
+  workspace_.pose = Eigen::Affine3d::Identity();
+  workspace_.pose.translation() = ((min + max) / 2).head(3).cast<double>();
+  workspace_.scale = (max - min).head(3).cast<double>();
 }
 
 void TableDetection::publishMarkers()
@@ -204,14 +210,11 @@ void TableDetection::publishMarkers()
       cloud_bounds_ptr_->at(i).z;
   }
 
-  Eigen::Vector3d ws_position = (workspace_min_ + workspace_max_) / 2;
-  Eigen::Vector3d ws_scale = workspace_max_ - workspace_min_;
-
   rviz_visualizer_ptr_->publishPolygon(bounds, Eigen::Quaterniond::Identity(), 0.02,
     rviz_visualizer::GREEN, "Bounds");
 
-  rviz_visualizer_ptr_->publishCube(ws_position, Eigen::Quaterniond::Identity(), ws_scale,
-    rviz_visualizer::BLUE, "Workspace");
+  rviz_visualizer_ptr_->publishCube(workspace_.pose.translation(), Eigen::Quaterniond::Identity(),
+    workspace_.scale, rviz_visualizer::BLUE, "Workspace");
 
   rviz_visualizer_ptr_->publish();
 }
