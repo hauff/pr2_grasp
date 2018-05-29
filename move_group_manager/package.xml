@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package>
 
-  <name>planning_scene_manager</name>
+  <name>move_group_manager</name>
   <version>0.0.0</version>
-  <description>The planning_scene_manager package.</description>
+  <description>The move_group_manager package.</description>
 
   <maintainer email="hauffn@informatik.uni-freiburg.de">Nico Hauff</maintainer>
   <author email="hauffn@informatik.uni-freiburg.de">Nico Hauff</author>

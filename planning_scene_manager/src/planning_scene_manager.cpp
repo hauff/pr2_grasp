@@ -30,12 +30,12 @@ void PlanningSceneManager::allowCollision(const std::string& id)
   }
 }
 
-void PlanningSceneManager::addBoxCollisionObject(const std::string& frame_id, const std::string& id,
+void PlanningSceneManager::addBoxCollisionObject(const std::string& frame_id, const std::string& object_id,
   const Eigen::Vector3d& dimensions, const Eigen::Affine3d& pose)
 {
   moveit_msgs::CollisionObject object;
   initHeader(ros::Time::now(), frame_id, object.header);
-  object.id = id;
+  object.id = object_id;
 
   object.primitives.resize(1);
   std::vector<double> dims(dimensions.data(), dimensions.data() + dimensions.size());
@@ -43,6 +43,16 @@ void PlanningSceneManager::addBoxCollisionObject(const std::string& frame_id, co
 
   object.primitive_poses.resize(1);
   tf::poseEigenToMsg(pose, object.primitive_poses[0]);
+
+  addCollisionObject(object);
+}
+
+void PlanningSceneManager::removeCollisionObject(const std::string& frame_id, const std::string& object_id)
+{
+  moveit_msgs::CollisionObject object;
+  object.header.frame_id = "odom_combined";
+  object.id = object_id;
+  object.operation = moveit_msgs::CollisionObject::REMOVE;
 
   addCollisionObject(object);
 }

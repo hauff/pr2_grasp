@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 
   table_detection
   planning_scene_manager
+  move_group_manager
 )
 
 find_package(PCL 1.8 REQUIRED)
@@ -27,9 +28,9 @@ add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES table_detection
-  CATKIN_DEPENDS roscpp gpd table_detection
-# DEPENDS system_lib
+# LIBRARIES
+  CATKIN_DEPENDS roscpp
+# DEPENDS
 )
 
 include_directories(

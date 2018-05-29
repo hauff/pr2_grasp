@@ -1,5 +1,6 @@
 #include <table_detection/table_detection.h>
 #include <planning_scene_manager/planning_scene_manager.h>
+#include <move_group_manager/move_group_manager.h>
 
 #include <ros/ros.h>
 #include <ros/package.h>
@@ -26,10 +27,6 @@
 #include <moveit_msgs/ApplyPlanningScene.h>
 #include <moveit_msgs/AllowedCollisionMatrix.h>
 
-const std::string ns = "pr2_grasp";
-const std::string name = "pr2_grasp_node";
-
-
 bool transform_cloud(tf2_ros::Buffer& tf_buffer, const sensor_msgs::PointCloud2& cloud_msg_in,
   sensor_msgs::PointCloud2& cloud_msg_out, Eigen::Vector3d& sensor_pos)
 {
@@ -54,14 +51,13 @@ void callback_clouds(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
   tf2_ros::Buffer& tf_buffer, sensor_msgs::PointCloud2& cloud_msg,
   Eigen::Vector3d& sensor_pos)
 {
-  //ROS_INFO("Recived point cloud.");
+  //ROS_INFO("Recived new point cloud.");
   transform_cloud(tf_buffer, *cloud_msg_ptr, cloud_msg, sensor_pos);
 }
 
 void callback_grasps(const gpd::GraspConfigList::ConstPtr& grasp_config_list_ptr,
   gpd::GraspConfigList& grasp_config_list)
 {
-  //ROS_INFO("Recived grasps.");
   grasp_config_list = *grasp_config_list_ptr;
 }
 
@@ -90,7 +86,7 @@ void set_gpd_params(ros::NodeHandle& nh_public, const Eigen::Vector3d& sensor_po
   bool success = client_gpd.call(set_params_srv);
 }
 
-bool quaternion_from_column_vectors(const geometry_msgs::Vector3& col_0, const geometry_msgs::Vector3& col_1,
+bool quaternion_from_vectors(const geometry_msgs::Vector3& col_0, const geometry_msgs::Vector3& col_1,
   const geometry_msgs::Vector3& col_2, geometry_msgs::Quaternion& quaternion)
 {
   Eigen::Matrix3d m;
@@ -102,85 +98,60 @@ bool quaternion_from_column_vectors(const geometry_msgs::Vector3& col_0, const g
   tf::quaternionEigenToMsg(Eigen::Quaterniond(m), quaternion);
 }
 
-void grasp(const gpd::GraspConfigList& grasp_config_list, ros::NodeHandle& nh_public)
+void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager::PlanningSceneManager scene_mgr,
+  move_group_manager::MoveGroupManager& group_mgr)
 {
-  moveit::planning_interface::MoveGroup group("right_arm");
-  //moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
 
-  //group.setPlanningTime(10);
-  group.setGoalTolerance(0.005);
+  scene_mgr.allowCollision("object");
+  ros::WallDuration(1.0).sleep();
 
   for (size_t i = 0; i < grasp_config_list.grasps.size(); i++)
   {
-
-    ros::AsyncSpinner spinner(8);
-
     const gpd::GraspConfig& grasp = grasp_config_list.grasps[i];
 
-    // add_collision_object(nh_public, grasp.bottom);
+    Eigen::Affine3d object_pose = Eigen::Affine3d::Identity();
+    object_pose.translation() << grasp.bottom.x, grasp.bottom.y, grasp.bottom.z;
+    scene_mgr.addBoxCollisionObject("odom_combined", "object", Eigen::Vector3d(0.1, 0.1, 0.3), object_pose);
+    ros::WallDuration(2.0).sleep();
 
-    geometry_msgs::Pose target_pose;
-    quaternion_from_column_vectors(grasp.approach, grasp.binormal, grasp.axis, target_pose.orientation);
+    geometry_msgs::Pose grasp_pose;
+    quaternion_from_vectors(grasp.approach, grasp.binormal, grasp.axis, grasp_pose.orientation);
+    //grasp_pose.position = grasp.bottom;
 
-    Eigen::Vector3f dir = Eigen::Vector3f(grasp.approach.x, grasp.approach.y, grasp.approach.z).normalized();
-    Eigen::Vector3f p = Eigen::Vector3f(grasp.bottom.x, grasp.bottom.y, grasp.bottom.z);
-    p = p + -dir * 0.2;
+    Eigen::Vector3d wrist =
+      Eigen::Vector3d(grasp.approach.x, grasp.approach.y, grasp.approach.z) * -0.12 +
+      Eigen::Vector3d(grasp.bottom.x, grasp.bottom.y, grasp.bottom.z);
+    grasp_pose.position.x = wrist.x();
+    grasp_pose.position.y = wrist.y();
+    grasp_pose.position.z = wrist.z();
 
-    target_pose.position.x = p.x();
-    target_pose.position.y = p.y();
-    target_pose.position.z = p.z();
-    group.setPoseTarget(target_pose, "r_wrist_roll_link");
 
-    moveit::planning_interface::MoveGroup::Plan plan_1, plan_2;
-    spinner.start();
-    bool success = group.plan(plan_1);
-    spinner.stop();
+    bool result = group_mgr.pick(grasp_pose, grasp.approach);
+    scene_mgr.removeCollisionObject("odom_combined", "object");
+    ros::WallDuration(2.0).sleep();
 
-    ROS_INFO("Plan 1: %s", success ? "SUCCESS" : "FAILED");
-
-    if (!success)
-      continue;
-
-    ROS_INFO("Wait for key press.");
-    std::cin.ignore();
-
-    spinner.start();
-    ROS_INFO("Execution of plan 1: %s", group.execute(plan_1) ? "SUCCESS" : "FAILED");
-
-    std::vector<geometry_msgs::Pose> waypoints;
-    //waypoints.push_back(target_pose);
-    p = p + dir * 0.08;
-    target_pose.position.x = p.x();
-    target_pose.position.y = p.y();
-    target_pose.position.z = p.z();
-    waypoints.push_back(target_pose);
-    moveit_msgs::RobotTrajectory trajectory;
-    double fraction = group.computeCartesianPath(waypoints, 0.01, 0.0, trajectory);
-    plan_2.trajectory_ = trajectory;
-    ROS_INFO("Plan 2: %.2f", fraction);
-
-    //ROS_INFO("Wait for key press.");
-    //std::cin.ignore();
-
-    ROS_INFO("Execution of plan 2: %s", group.execute(plan_2) ? "SUCCESS" : "FAILED");
-    spinner.stop();
-
-    exit(EXIT_SUCCESS);
+    if (!result)
+    {
+      ROS_INFO("FAILURE");
+    }
+    else
+    {
+      exit(EXIT_SUCCESS);
+    }
   }
 }
+
+// https://github.com/ros-planning/moveit_tutorials/blob/indigo-devel/doc/pr2_tutorials/pick_place/src/pick_place_tutorial.cpp#L6
+// Found a contact between 'object' (type 'Object') and 'object' (type 'Robot attached'), which constitutes a collision. Contact information is not stored.
+// Stopping execution because the path to execute became invalid (probably the environment changed)
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "pr2_grasp");
   ros::NodeHandle nh_public, nh_private("~");
 
-  //exit(EXIT_SUCCESS);
-
-  std::string topic_clouds_in = "/move_group/filtered_cloud";
-  //std::string topic_clouds_in = "/head_mount_kinect/depth_registered/points";
-  //std::string topic_clouds_in = "/camera/depth_registered/points";
-  //std::string topic_clouds_out = "/head_mount_kinect/depth_registered/points/odom_combined";
-  std::string topic_clouds_out = "/filtered_cloud/odom_combined";
+  std::string topic_clouds_in = "/kinect2/qhd/points";
+  std::string topic_clouds_out = "/detect_grasps/point_cloud";
   std::string topic_grasps_in = "/detect_grasps/clustered_grasps";
 
   tf2_ros::Buffer tf_buffer;
@@ -200,6 +171,7 @@ int main(int argc, char **argv)
 
   table_detection::TableDetection table_detection;
   planning_scene_manager::PlanningSceneManager scene_mgr;
+  move_group_manager::MoveGroupManager group_mgr;
 
   ros::Rate rate(10);
   while (ros::ok())
@@ -216,8 +188,6 @@ int main(int argc, char **argv)
     table_detection.detect(cloud_msg);
     table_detection::Workspace workspace = table_detection.getWorkspace();
 
-    continue;
-
     ROS_INFO("Set gpd parameters and publish point cloud.");
     set_gpd_params(nh_public, sensor_pos, workspace);
     pub_clouds.publish(cloud_msg);
@@ -230,8 +200,8 @@ int main(int argc, char **argv)
       rate.sleep();
     }
 
-    ROS_INFO("Move gripper to object.");
-    grasp(grasp_config_list, nh_public);
+    ROS_INFO("Try to grasp object.");
+    grasp(grasp_config_list, scene_mgr, group_mgr);
 
     rate.sleep();
   }
