@@ -4,7 +4,7 @@ An experimental playground.
 
 ```
 roslaunch pr2_gazebo pr2_empty_world.launch
-roslaunch pr2_moveit_config warehouse.launch moveit_warehouse_database_path:=~/.moveit_db
+roslaunch pr2_moveit_config warehouse.launch moveit_warehouse_database_path:=~/warehouse_db
 roslaunch pr2_moveit_config move_group.launch
 rviz
 roslaunch gpd tutorial1.launch

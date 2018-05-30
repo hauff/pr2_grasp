@@ -26,7 +26,7 @@ public:
 
   bool execute(const moveit::planning_interface::MoveGroup::Plan& plan);
 
-  bool pick(const geometry_msgs::Pose& grasp_pose, const geometry_msgs::Vector3& approach);
+  int pick(const geometry_msgs::Pose& grasp_pose, const geometry_msgs::Vector3& approach);
 
 private:
 

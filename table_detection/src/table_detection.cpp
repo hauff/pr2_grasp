@@ -177,7 +177,12 @@ void TableDetection::computeWorkspace()
   Eigen::Vector4f min, max;
   pcl::getMinMax3D(*cloud_filtered_ptr_, *inlier_ptr_, min, max);
 
-  min.z() += 0.08;
+  table_.frame_id = cloud_filtered_ptr_->header.frame_id;
+  table_.pose = Eigen::Affine3d::Identity();
+  table_.pose.translation() = ((min + max) / 2).head(3).cast<double>();
+  table_.scale = (max - min).head(3).cast<double>();
+
+  min.z() += 0.05;
   max.z() += 0.5;
 
   workspace_.frame_id = cloud_filtered_ptr_->header.frame_id;

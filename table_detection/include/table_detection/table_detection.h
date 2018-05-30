@@ -31,6 +31,8 @@ public:
 
   Workspace getWorkspace() { return workspace_; }
 
+  Workspace getTable() { return table_; }
+
 private:
 
   void cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr);
@@ -70,6 +72,7 @@ private:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_bounds_ptr_;
   Workspace workspace_;
+  Workspace table_;
 
   ros::NodeHandle nh_public_;
   ros::NodeHandle nh_private_;

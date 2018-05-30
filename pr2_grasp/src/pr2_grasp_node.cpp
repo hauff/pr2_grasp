@@ -27,6 +27,8 @@
 #include <moveit_msgs/ApplyPlanningScene.h>
 #include <moveit_msgs/AllowedCollisionMatrix.h>
 
+bool is_grasp_recived = false;
+
 bool transform_cloud(tf2_ros::Buffer& tf_buffer, const sensor_msgs::PointCloud2& cloud_msg_in,
   sensor_msgs::PointCloud2& cloud_msg_out, Eigen::Vector3d& sensor_pos)
 {
@@ -51,14 +53,17 @@ void callback_clouds(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
   tf2_ros::Buffer& tf_buffer, sensor_msgs::PointCloud2& cloud_msg,
   Eigen::Vector3d& sensor_pos)
 {
-  //ROS_INFO("Recived new point cloud.");
+  ROS_INFO("Recived point cloud.");
   transform_cloud(tf_buffer, *cloud_msg_ptr, cloud_msg, sensor_pos);
 }
 
 void callback_grasps(const gpd::GraspConfigList::ConstPtr& grasp_config_list_ptr,
   gpd::GraspConfigList& grasp_config_list)
 {
+  ROS_INFO("Recived grasp proposals.");
   grasp_config_list = *grasp_config_list_ptr;
+
+  is_grasp_recived = true;
 }
 
 void set_gpd_params(ros::NodeHandle& nh_public, const Eigen::Vector3d& sensor_pos,
@@ -102,8 +107,8 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
   move_group_manager::MoveGroupManager& group_mgr)
 {
 
-  scene_mgr.allowCollision("object");
-  ros::WallDuration(1.0).sleep();
+  //scene_mgr.allowCollision("object");
+  //ros::WallDuration(1.0).sleep();
 
   for (size_t i = 0; i < grasp_config_list.grasps.size(); i++)
   {
@@ -111,8 +116,8 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
 
     Eigen::Affine3d object_pose = Eigen::Affine3d::Identity();
     object_pose.translation() << grasp.bottom.x, grasp.bottom.y, grasp.bottom.z;
-    scene_mgr.addBoxCollisionObject("odom_combined", "object", Eigen::Vector3d(0.1, 0.1, 0.3), object_pose);
-    ros::WallDuration(2.0).sleep();
+    scene_mgr.addBoxCollisionObject("odom_combined", "object", Eigen::Vector3d(0.1, 0.1, 0.2), object_pose);
+    //ros::WallDuration(1.0).sleep();
 
     geometry_msgs::Pose grasp_pose;
     quaternion_from_vectors(grasp.approach, grasp.binormal, grasp.axis, grasp_pose.orientation);
@@ -126,17 +131,17 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
     grasp_pose.position.z = wrist.z();
 
 
-    bool result = group_mgr.pick(grasp_pose, grasp.approach);
+    int result = group_mgr.pick(grasp_pose, grasp.approach);
     scene_mgr.removeCollisionObject("odom_combined", "object");
-    ros::WallDuration(2.0).sleep();
+    //ros::WallDuration(2.0).sleep();
 
-    if (!result)
-    {
-      ROS_INFO("FAILURE");
-    }
-    else
-    {
+    if (result == 1)
       exit(EXIT_SUCCESS);
+
+    if (result != -1)
+    {
+      std::cout << "Error code: " << result << std::endl;
+      std::cin.get();
     }
   }
 }
@@ -150,7 +155,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "pr2_grasp");
   ros::NodeHandle nh_public, nh_private("~");
 
-  std::string topic_clouds_in = "/kinect2/qhd/points";
+  std::string topic_clouds_in = "/camera/depth_registered/points";
   std::string topic_clouds_out = "/detect_grasps/point_cloud";
   std::string topic_grasps_in = "/detect_grasps/clustered_grasps";
 
@@ -187,6 +192,9 @@ int main(int argc, char **argv)
     ROS_INFO("Try to detect table.");
     table_detection.detect(cloud_msg);
     table_detection::Workspace workspace = table_detection.getWorkspace();
+    table_detection::Workspace table = table_detection.getTable();
+
+    scene_mgr.addBoxCollisionObject("odom_combined", "table", table.scale, table.pose);
 
     ROS_INFO("Set gpd parameters and publish point cloud.");
     set_gpd_params(nh_public, sensor_pos, workspace);
@@ -194,11 +202,15 @@ int main(int argc, char **argv)
 
     ROS_INFO("Wait for grasps.");
     grasp_config_list.grasps.clear();
-    while (ros::ok() && grasp_config_list.grasps.empty())
+    //while (ros::ok() && grasp_config_list.grasps.empty())
+    is_grasp_recived = false;
+    while (ros::ok() && !is_grasp_recived)
     {
       ros::spinOnce();
       rate.sleep();
     }
+
+    ROS_INFO("Num grasps: %lu", grasp_config_list.grasps.size());
 
     ROS_INFO("Try to grasp object.");
     grasp(grasp_config_list, scene_mgr, group_mgr);
