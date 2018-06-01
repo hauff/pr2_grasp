@@ -124,7 +124,7 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
     //grasp_pose.position = grasp.bottom;
 
     Eigen::Vector3d wrist =
-      Eigen::Vector3d(grasp.approach.x, grasp.approach.y, grasp.approach.z) * -0.12 +
+      Eigen::Vector3d(grasp.approach.x, grasp.approach.y, grasp.approach.z) * -0.15 +
       Eigen::Vector3d(grasp.bottom.x, grasp.bottom.y, grasp.bottom.z);
     grasp_pose.position.x = wrist.x();
     grasp_pose.position.y = wrist.y();
@@ -132,7 +132,7 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
 
 
     int result = group_mgr.pick(grasp_pose, grasp.approach);
-    scene_mgr.removeCollisionObject("odom_combined", "object");
+    scene_mgr.removeCollisionObject("r_wist_roll_link", "object");
     //ros::WallDuration(2.0).sleep();
 
     if (result == 1)
@@ -145,10 +145,6 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
     }
   }
 }
-
-// https://github.com/ros-planning/moveit_tutorials/blob/indigo-devel/doc/pr2_tutorials/pick_place/src/pick_place_tutorial.cpp#L6
-// Found a contact between 'object' (type 'Object') and 'object' (type 'Robot attached'), which constitutes a collision. Contact information is not stored.
-// Stopping execution because the path to execute became invalid (probably the environment changed)
 
 int main(int argc, char **argv)
 {
