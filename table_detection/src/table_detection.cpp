@@ -182,8 +182,10 @@ void TableDetection::computeWorkspace()
   table_.pose.translation() = ((min + max) / 2).head(3).cast<double>();
   table_.scale = (max - min).head(3).cast<double>();
 
-  min.z() += 0.05;
-  max.z() += 0.5;
+  table_.scale.y() += 1;
+
+  min.z() += 0.04;
+  max.z() += 0.3;
 
   workspace_.frame_id = cloud_filtered_ptr_->header.frame_id;
   workspace_.pose = Eigen::Affine3d::Identity();

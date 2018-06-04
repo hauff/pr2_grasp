@@ -55,14 +55,6 @@ bool MoveGroupManager::execute(const moveit::planning_interface::MoveGroup::Plan
 
 int MoveGroupManager::pick(const geometry_msgs::Pose& grasp_pose, const geometry_msgs::Vector3& approach)
 {
-  /*
-  if (call_back_queue_.isEmpty())
-  {
-    ROS_INFO("Callback queue empty.");
-    return -1;
-  }
-  */
-
   moveit_msgs::Grasp grasp;
 
   grasp.grasp_pose.header.frame_id = "odom_combined";
@@ -114,13 +106,22 @@ int MoveGroupManager::pick(const geometry_msgs::Pose& grasp_pose, const geometry
   grasp.grasp_posture.points[0].positions[4] = 0.002;
   grasp.grasp_posture.points[0].positions[5] = 0.002;
 
-  //grasp.allowed_touch_objects.push_back("object");
-
   async_spinner_ptr_->start();
-  ROS_INFO("Before pick.");
   group_ptr_->setSupportSurfaceName("table");
   moveit_msgs::MoveItErrorCodes result = group_ptr_->pick("object", grasp);
-  ROS_INFO("After pick.");
+  async_spinner_ptr_->stop();
+
+  return result.val;
+}
+
+int MoveGroupManager::place(const geometry_msgs::Pose& pose)
+{
+  geometry_msgs::PoseStamped ps;
+  ps.pose = pose;
+
+  async_spinner_ptr_->start();
+  //group_ptr_->setSupportSurfaceName("box");
+  moveit_msgs::MoveItErrorCodes result = group_ptr_->place("object", ps);
   async_spinner_ptr_->stop();
 
   return result.val;

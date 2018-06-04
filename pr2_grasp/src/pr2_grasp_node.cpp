@@ -103,13 +103,9 @@ bool quaternion_from_vectors(const geometry_msgs::Vector3& col_0, const geometry
   tf::quaternionEigenToMsg(Eigen::Quaterniond(m), quaternion);
 }
 
-void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager::PlanningSceneManager scene_mgr,
+bool grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager::PlanningSceneManager scene_mgr,
   move_group_manager::MoveGroupManager& group_mgr)
 {
-
-  //scene_mgr.allowCollision("object");
-  //ros::WallDuration(1.0).sleep();
-
   for (size_t i = 0; i < grasp_config_list.grasps.size(); i++)
   {
     const gpd::GraspConfig& grasp = grasp_config_list.grasps[i];
@@ -117,11 +113,9 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
     Eigen::Affine3d object_pose = Eigen::Affine3d::Identity();
     object_pose.translation() << grasp.bottom.x, grasp.bottom.y, grasp.bottom.z;
     scene_mgr.addBoxCollisionObject("odom_combined", "object", Eigen::Vector3d(0.1, 0.1, 0.2), object_pose);
-    //ros::WallDuration(1.0).sleep();
 
     geometry_msgs::Pose grasp_pose;
     quaternion_from_vectors(grasp.approach, grasp.binormal, grasp.axis, grasp_pose.orientation);
-    //grasp_pose.position = grasp.bottom;
 
     Eigen::Vector3d wrist =
       Eigen::Vector3d(grasp.approach.x, grasp.approach.y, grasp.approach.z) * -0.15 +
@@ -130,13 +124,11 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
     grasp_pose.position.y = wrist.y();
     grasp_pose.position.z = wrist.z();
 
-
     int result = group_mgr.pick(grasp_pose, grasp.approach);
     scene_mgr.removeCollisionObject("r_wist_roll_link", "object");
-    //ros::WallDuration(2.0).sleep();
 
     if (result == 1)
-      exit(EXIT_SUCCESS);
+      return true;
 
     if (result != -1)
     {
@@ -144,6 +136,8 @@ void grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
       std::cin.get();
     }
   }
+
+  return false;
 }
 
 int main(int argc, char **argv)
@@ -190,6 +184,11 @@ int main(int argc, char **argv)
     table_detection::Workspace workspace = table_detection.getWorkspace();
     table_detection::Workspace table = table_detection.getTable();
 
+    Eigen::Affine3d box_pose = table.pose;
+    box_pose.translation().y() = -0.65;
+    box_pose.translation().z() += 0.13;
+    scene_mgr.addBoxCollisionObject("odom_combined", "box", Eigen::Vector3d(0.4, 0.3, 0.25), box_pose);
+
     scene_mgr.addBoxCollisionObject("odom_combined", "table", table.scale, table.pose);
 
     ROS_INFO("Set gpd parameters and publish point cloud.");
@@ -198,7 +197,6 @@ int main(int argc, char **argv)
 
     ROS_INFO("Wait for grasps.");
     grasp_config_list.grasps.clear();
-    //while (ros::ok() && grasp_config_list.grasps.empty())
     is_grasp_recived = false;
     while (ros::ok() && !is_grasp_recived)
     {
@@ -209,7 +207,18 @@ int main(int argc, char **argv)
     ROS_INFO("Num grasps: %lu", grasp_config_list.grasps.size());
 
     ROS_INFO("Try to grasp object.");
-    grasp(grasp_config_list, scene_mgr, group_mgr);
+    if (grasp(grasp_config_list, scene_mgr, group_mgr))
+    {
+      ROS_INFO("Try to place object.");
+      geometry_msgs::Pose place_pose;
+      place_pose.orientation.w = 1;
+      place_pose.position.x = box_pose.translation().x();
+      place_pose.position.y = box_pose.translation().y();
+      place_pose.position.z = box_pose.translation().z() + 0.25;
+      int result = group_mgr.place(place_pose);
+      std::cout << "error code: " << result << std::endl;
+      std::cin.get();
+    }
 
     rate.sleep();
   }

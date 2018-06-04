@@ -28,6 +28,8 @@ public:
 
   int pick(const geometry_msgs::Pose& grasp_pose, const geometry_msgs::Vector3& approach);
 
+  int place(const geometry_msgs::Pose& pose);
+
 private:
 
   ros::NodeHandle nh_;
