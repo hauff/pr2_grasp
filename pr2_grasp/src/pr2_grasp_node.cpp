@@ -125,7 +125,7 @@ bool grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
     grasp_pose.position.z = wrist.z();
 
     int result = group_mgr.pick(grasp_pose, grasp.approach);
-    scene_mgr.removeCollisionObject("r_wist_roll_link", "object");
+    //scene_mgr.removeCollisionObject("r_wist_roll_link", "object");
 
     if (result == 1)
       return true;
@@ -133,7 +133,7 @@ bool grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
     if (result != -1)
     {
       std::cout << "Error code: " << result << std::endl;
-      std::cin.get();
+      exit(1);
     }
   }
 
@@ -151,6 +151,7 @@ int main(int argc, char **argv)
 
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener(tf_buffer);
+
 
   Eigen::Vector3d sensor_pos;
   sensor_msgs::PointCloud2 cloud_msg;
@@ -212,12 +213,21 @@ int main(int argc, char **argv)
       ROS_INFO("Try to place object.");
       geometry_msgs::Pose place_pose;
       place_pose.orientation.w = 1;
-      place_pose.position.x = box_pose.translation().x();
-      place_pose.position.y = box_pose.translation().y();
-      place_pose.position.z = box_pose.translation().z() + 0.25;
-      int result = group_mgr.place(place_pose);
-      std::cout << "error code: " << result << std::endl;
-      std::cin.get();
+      place_pose.position.x = 0.4;
+      place_pose.position.y = -0.65;
+      place_pose.position.z = 1.2;
+
+      //group_mgr.place(place_pose);
+
+      moveit::planning_interface::MoveGroup::Plan plan;
+      if (group_mgr.plan(place_pose, "r_wrist_roll_link", plan))
+      {
+        group_mgr.execute(plan);
+        group_mgr.openGripper();
+        
+      }
+      else
+        exit(1);
     }
 
     rate.sleep();

@@ -184,7 +184,7 @@ void TableDetection::computeWorkspace()
 
   table_.scale.y() += 1;
 
-  min.z() += 0.04;
+  min.z() += 0.06;
   max.z() += 0.3;
 
   workspace_.frame_id = cloud_filtered_ptr_->header.frame_id;

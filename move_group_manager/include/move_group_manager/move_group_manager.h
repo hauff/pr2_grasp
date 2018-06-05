@@ -30,12 +30,15 @@ public:
 
   int place(const geometry_msgs::Pose& pose);
 
+  void openGripper();
+
 private:
 
   ros::NodeHandle nh_;
   ros::CallbackQueue call_back_queue_;
   boost::shared_ptr<ros::AsyncSpinner> async_spinner_ptr_;
   boost::shared_ptr<moveit::planning_interface::MoveGroup> group_ptr_;
+  boost::shared_ptr<moveit::planning_interface::MoveGroup> right_gripper_ptr_;
 
 };
 

@@ -8,11 +8,13 @@ MoveGroupManager::MoveGroupManager()
 {
   nh_.setCallbackQueue(&call_back_queue_);
   async_spinner_ptr_.reset(new ros::AsyncSpinner(8, &call_back_queue_));
-  //async_spinner_ptr_.reset(new ros::AsyncSpinner(8));
 
-  moveit::planning_interface::MoveGroup::Options options("right_arm", "robot_description", nh_);
-  //group_ptr_.reset(new moveit::planning_interface::MoveGroup("right_arm"));
-  group_ptr_.reset(new moveit::planning_interface::MoveGroup(options));
+  moveit::planning_interface::MoveGroup::Options options_arm("right_arm", "robot_description", nh_);
+  group_ptr_.reset(new moveit::planning_interface::MoveGroup(options_arm));
+
+  moveit::planning_interface::MoveGroup::Options options_right_gripper("right_gripper", "robot_description", nh_);
+  right_gripper_ptr_.reset(new moveit::planning_interface::MoveGroup(options_right_gripper));
+
   group_ptr_->setGoalTolerance(0.005);
   //group_ptr_->setNumPlanningAttempts(3);
   //group_ptr_->setPlanningTime(5.0);
@@ -116,15 +118,70 @@ int MoveGroupManager::pick(const geometry_msgs::Pose& grasp_pose, const geometry
 
 int MoveGroupManager::place(const geometry_msgs::Pose& pose)
 {
+  moveit_msgs::PlaceLocation location;
+
+  location.place_pose.header.frame_id = "odom_combined";
+  location.place_pose.pose = pose;
+
+  location.pre_place_approach.direction.header.frame_id = "odom_combined";
+  location.pre_place_approach.direction.vector.z = -1.0;
+  location.pre_place_approach.min_distance = 0.1;
+  location.pre_place_approach.desired_distance = 0.25;
+
+  location.post_place_retreat.direction.header.frame_id = "odom_combined";
+  location.post_place_retreat.direction.vector.x = -1.0;
+  location.post_place_retreat.min_distance = 0.1;
+  location.post_place_retreat.desired_distance = 0.25;
+
+  // Open gripper
+  location.post_place_posture.joint_names.resize(6);
+  location.post_place_posture.joint_names[0] = "r_gripper_joint";
+  location.post_place_posture.joint_names[1] = "r_gripper_motor_screw_joint";
+  location.post_place_posture.joint_names[2] = "r_gripper_l_finger_joint";
+  location.post_place_posture.joint_names[3] = "r_gripper_r_finger_joint";
+  location.post_place_posture.joint_names[4] = "r_gripper_r_finger_tip_joint";
+  location.post_place_posture.joint_names[5] = "r_gripper_l_finger_tip_joint";
+
+  location.post_place_posture.points.resize(1);
+  location.post_place_posture.points[0].positions.resize(6);
+  location.post_place_posture.points[0].positions[0] = 1;
+  location.post_place_posture.points[0].positions[1] = 1.0;
+  location.post_place_posture.points[0].positions[2] = 0.477;
+  location.post_place_posture.points[0].positions[3] = 0.477;
+  location.post_place_posture.points[0].positions[4] = 0.477;
+  location.post_place_posture.points[0].positions[5] = 0.477;
+
+  std::vector<moveit_msgs::PlaceLocation> locations;
+  locations.push_back(location);
+
   geometry_msgs::PoseStamped ps;
+  ps.header.frame_id = "odom_combined";
   ps.pose = pose;
 
   async_spinner_ptr_->start();
-  //group_ptr_->setSupportSurfaceName("box");
+  group_ptr_->setSupportSurfaceName("box");
   moveit_msgs::MoveItErrorCodes result = group_ptr_->place("object", ps);
   async_spinner_ptr_->stop();
 
   return result.val;
+}
+
+void MoveGroupManager::openGripper()
+{
+  std::map<std::string, double> values;
+  values["r_gripper_joint"] = 1;
+  values["r_gripper_motor_screw_joint"] = 1;
+  values["r_gripper_l_finger_joint"] = 0.477;
+  values["r_gripper_r_finger_joint"] = 0.477;
+  values["r_gripper_r_finger_tip_joint"] = 0.477;
+  values["r_gripper_l_finger_tip_joint"] = 0.477;
+
+  async_spinner_ptr_->start();
+  right_gripper_ptr_->setJointValueTarget(values);
+  right_gripper_ptr_->move();
+  async_spinner_ptr_->stop();
+
+  group_ptr_->detachObject("object");
 }
 
 }
