@@ -31,7 +31,7 @@ void PlanningSceneManager::allowCollision(const std::string& id)
 }
 
 void PlanningSceneManager::addBoxCollisionObject(const std::string& frame_id, const std::string& object_id,
-  const Eigen::Vector3d& dimensions, const Eigen::Affine3d& pose)
+  const Eigen::Affine3d& pose, const Eigen::Vector3d& dimensions)
 {
   moveit_msgs::CollisionObject object;
   initHeader(ros::Time::now(), frame_id, object.header);

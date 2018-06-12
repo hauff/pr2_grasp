@@ -112,7 +112,7 @@ bool grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
 
     Eigen::Affine3d object_pose = Eigen::Affine3d::Identity();
     object_pose.translation() << grasp.bottom.x, grasp.bottom.y, grasp.bottom.z;
-    scene_mgr.addBoxCollisionObject("odom_combined", "object", Eigen::Vector3d(0.1, 0.1, 0.2), object_pose);
+    scene_mgr.addBoxCollisionObject("odom_combined", "object", object_pose, Eigen::Vector3d(0.1, 0.1, 0.2));
 
     geometry_msgs::Pose grasp_pose;
     quaternion_from_vectors(grasp.approach, grasp.binormal, grasp.axis, grasp_pose.orientation);
@@ -145,13 +145,13 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "pr2_grasp");
   ros::NodeHandle nh_public, nh_private("~");
 
-  std::string topic_clouds_in = "/camera/depth_registered/points";
+  //std::string topic_clouds_in = "/camera/depth_registered/points";
+  std::string topic_clouds_in = "/move_group/filtered_cloud";
   std::string topic_clouds_out = "/detect_grasps/point_cloud";
   std::string topic_grasps_in = "/detect_grasps/clustered_grasps";
 
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener(tf_buffer);
-
 
   Eigen::Vector3d sensor_pos;
   sensor_msgs::PointCloud2 cloud_msg;
@@ -186,11 +186,7 @@ int main(int argc, char **argv)
     table_detection::Workspace table = table_detection.getTable();
 
     Eigen::Affine3d box_pose = table.pose;
-    box_pose.translation().y() = -0.65;
-    box_pose.translation().z() += 0.13;
-    scene_mgr.addBoxCollisionObject("odom_combined", "box", Eigen::Vector3d(0.4, 0.3, 0.25), box_pose);
-
-    scene_mgr.addBoxCollisionObject("odom_combined", "table", table.scale, table.pose);
+    scene_mgr.addBoxCollisionObject("odom_combined", "table", table.pose, table.scale);
 
     ROS_INFO("Set gpd parameters and publish point cloud.");
     set_gpd_params(nh_public, sensor_pos, workspace);
@@ -213,11 +209,9 @@ int main(int argc, char **argv)
       ROS_INFO("Try to place object.");
       geometry_msgs::Pose place_pose;
       place_pose.orientation.w = 1;
-      place_pose.position.x = 0.4;
-      place_pose.position.y = -0.65;
+      place_pose.position.x = 1.15;
+      place_pose.position.y = -0.53;
       place_pose.position.z = 1.2;
-
-      //group_mgr.place(place_pose);
 
       moveit::planning_interface::MoveGroup::Plan plan;
       if (group_mgr.plan(place_pose, "r_wrist_roll_link", plan))

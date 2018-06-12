@@ -26,3 +26,6 @@ include_directories(
 
 add_library(planning_scene_manager src/planning_scene_manager.cpp)
 target_link_libraries(planning_scene_manager ${catkin_LIBRARIES})
+
+add_executable(add_collision_box src/add_collision_box_node.cpp)
+target_link_libraries(add_collision_box ${catkin_LIBRARIES} planning_scene_manager)

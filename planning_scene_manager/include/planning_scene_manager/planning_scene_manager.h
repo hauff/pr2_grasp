@@ -23,7 +23,7 @@ public:
   void allowCollision(const std::string& id);
 
   void addBoxCollisionObject(const std::string& frame_id, const std::string& object_id,
-    const Eigen::Vector3d& dimensions, const Eigen::Affine3d& pose);
+    const Eigen::Affine3d& pose, const Eigen::Vector3d& dimensions);
 
   void removeCollisionObject(const std::string& frame_id, const std::string& object_id);
 

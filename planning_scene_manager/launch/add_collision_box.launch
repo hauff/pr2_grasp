@@ -1,0 +1,9 @@
+<launch>
+
+  <node name="add_collision_box" pkg="planning_scene_manager" type="add_collision_box" output="screen">
+    <rosparam param="frame_id">odom_combined</rosparam>
+    <rosparam param="object_id">placing_bin</rosparam>
+    <rosparam param="dimensions">[0.41, 0.31, 0.23]</rosparam>
+  </node>
+
+</launch>

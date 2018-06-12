@@ -15,9 +15,9 @@ MoveGroupManager::MoveGroupManager()
   moveit::planning_interface::MoveGroup::Options options_right_gripper("right_gripper", "robot_description", nh_);
   right_gripper_ptr_.reset(new moveit::planning_interface::MoveGroup(options_right_gripper));
 
-  group_ptr_->setGoalTolerance(0.005);
+  group_ptr_->setGoalTolerance(0.01);
   //group_ptr_->setNumPlanningAttempts(3);
-  //group_ptr_->setPlanningTime(5.0);
+  group_ptr_->setPlanningTime(10.0);
 }
 
 bool MoveGroupManager::plan(const geometry_msgs::Pose& pose, const std::string& eef_link,
