@@ -67,8 +67,9 @@ void callback_grasps(const gpd::GraspConfigList::ConstPtr& grasp_config_list_ptr
 }
 
 void set_gpd_params(ros::NodeHandle& nh_public, const Eigen::Vector3d& sensor_pos,
-  const table_detection::Workspace& workspace)
+  const table_detection::Table& workspace)
 {
+  // TODO: there is no workspace
   Eigen::Vector3d ws_min = workspace.pose.translation() - 0.5 * workspace.scale;
   Eigen::Vector3d ws_max = workspace.pose.translation() + 0.5 * workspace.scale;
 
@@ -181,9 +182,10 @@ int main(int argc, char **argv)
     }
 
     ROS_INFO("Try to detect table.");
+    // TODO: there is no workspace
     table_detection.detect(cloud_msg);
-    table_detection::Workspace workspace = table_detection.getWorkspace();
-    table_detection::Workspace table = table_detection.getTable();
+    table_detection::Table workspace = table_detection.getTable();
+    table_detection::Table table = table_detection.getTable();
 
     Eigen::Affine3d box_pose = table.pose;
     scene_mgr.addBoxCollisionObject("odom_combined", "table", table.pose, table.scale);
@@ -214,7 +216,7 @@ int main(int argc, char **argv)
       place_pose.position.z = 1.2;
 
       moveit::planning_interface::MoveGroup::Plan plan;
-      if (group_mgr.plan(place_pose, "r_wrist_roll_link", plan))
+      if (group_mgr.plan("odom_combined", "r_wrist_roll_link", place_pose, plan))
       {
         group_mgr.execute(plan);
         group_mgr.openGripper();

@@ -18,11 +18,13 @@ public:
 
   MoveGroupManager();
 
-  bool plan(const geometry_msgs::Pose& pose, const std::string& eef_link,
-    moveit::planning_interface::MoveGroup::Plan& plan);
-
   bool planCartesianPath(const std::vector<geometry_msgs::Pose>& poses,
     moveit::planning_interface::MoveGroup::Plan& plan);
+
+  bool plan(const std::string& frame_id, const std::string& eef_link,
+    const geometry_msgs::Pose& pose, moveit::planning_interface::MoveGroup::Plan& plan);
+
+  bool plan(moveit::planning_interface::MoveGroup::Plan& plan);
 
   bool execute(const moveit::planning_interface::MoveGroup::Plan& plan);
 

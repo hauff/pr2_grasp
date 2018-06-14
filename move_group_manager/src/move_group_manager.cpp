@@ -20,18 +20,6 @@ MoveGroupManager::MoveGroupManager()
   group_ptr_->setPlanningTime(10.0);
 }
 
-bool MoveGroupManager::plan(const geometry_msgs::Pose& pose, const std::string& eef_link,
-  moveit::planning_interface::MoveGroup::Plan& plan)
-{
-  group_ptr_->setPoseTarget(pose, eef_link);
-
-  async_spinner_ptr_->start();
-  bool result = group_ptr_->plan(plan);
-  async_spinner_ptr_->stop();
-
-  return result;
-}
-
 bool MoveGroupManager::planCartesianPath(const std::vector<geometry_msgs::Pose>& poses,
   moveit::planning_interface::MoveGroup::Plan& plan)
 {
@@ -39,6 +27,26 @@ bool MoveGroupManager::planCartesianPath(const std::vector<geometry_msgs::Pose>&
   double fraction = group_ptr_->computeCartesianPath(poses, 0.01, 0.0, trajectory);
   plan.trajectory_ = trajectory;
 
+  bool result = this->plan(plan);
+
+  return result;
+}
+
+bool MoveGroupManager::plan(const std::string& frame_id, const std::string& eef_link,
+  const geometry_msgs::Pose& pose, moveit::planning_interface::MoveGroup::Plan& plan)
+{
+  geometry_msgs::PoseStamped pose_stamped;
+  pose_stamped.header.frame_id = frame_id;
+  pose_stamped.pose = pose;
+
+  group_ptr_->setPoseTarget(pose_stamped, eef_link);
+  bool result = this->plan(plan);
+
+  return result;
+}
+
+bool MoveGroupManager::plan(moveit::planning_interface::MoveGroup::Plan& plan)
+{
   async_spinner_ptr_->start();
   bool result = group_ptr_->plan(plan);
   async_spinner_ptr_->stop();

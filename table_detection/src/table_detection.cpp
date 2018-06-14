@@ -15,8 +15,6 @@ namespace table_detection
 
 TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 {
-  //cloud_topic_in_ = "/head_mount_kinect/depth_registered/points";
-  //cloud_topic_in_ = "/camera/depth_registered/points";
   voxel_grid_size_ = 0.02;
   crop_box_.resize(6);
   crop_box_ << 0, 2, -1, 1, 0.1, 1;
@@ -31,13 +29,20 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
   cloud_filtered_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_bounds_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
 
-/*
-  sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(
-    cloud_topic_in_, 10, &TableDetection::cloudCallback, this);
-*/
   rviz_visualizer_ptr_.reset(new rviz_visualizer::RvizVisualizer(
     "odom_combined", "markers", nh_private_));
   rviz_visualizer_ptr_->setAlpha(0.5);
+}
+
+void TableDetection::run(const std::string& topic)
+{
+  sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(
+    topic, 10, &TableDetection::cloudCallback, this);
+}
+
+void TableDetection::stop()
+{
+  sub_cloud_.shutdown();
 }
 
 void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
@@ -54,7 +59,7 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
   extractCluster();
   projectPointCloudToModel();
   computeConvexHull();
-  computeWorkspace();
+  computeBounds();
 
   publishMarkers();
 }
@@ -169,7 +174,7 @@ void TableDetection::computeConvexHull()
   pcl::copyPointCloud(cloud_tmp, *cloud_bounds_ptr_);
 }
 
-void TableDetection::computeWorkspace()
+void TableDetection::computeBounds()
 {
   if (inlier_ptr_->indices.empty() || cloud_filtered_ptr_->empty())
     return;
@@ -182,15 +187,9 @@ void TableDetection::computeWorkspace()
   table_.pose.translation() = ((min + max) / 2).head(3).cast<double>();
   table_.scale = (max - min).head(3).cast<double>();
 
-  table_.scale.y() += 1;
-
-  min.z() += 0.06;
-  max.z() += 0.3;
-
-  workspace_.frame_id = cloud_filtered_ptr_->header.frame_id;
-  workspace_.pose = Eigen::Affine3d::Identity();
-  workspace_.pose.translation() = ((min + max) / 2).head(3).cast<double>();
-  workspace_.scale = (max - min).head(3).cast<double>();
+  table_.scale.x() += 0.02;
+  table_.scale.y() += 0.02;
+  table_.scale.z() += 0.02;
 }
 
 void TableDetection::publishMarkers()
@@ -206,9 +205,6 @@ void TableDetection::publishMarkers()
 
   rviz_visualizer_ptr_->publishPolygon(bounds, Eigen::Quaterniond::Identity(), 0.02,
     rviz_visualizer::GREEN, "Bounds");
-
-  rviz_visualizer_ptr_->publishCube(workspace_.pose.translation(), Eigen::Quaterniond::Identity(),
-    workspace_.scale, rviz_visualizer::BLUE, "Workspace");
 
   rviz_visualizer_ptr_->publish();
 }

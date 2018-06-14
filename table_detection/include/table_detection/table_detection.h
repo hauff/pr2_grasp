@@ -13,7 +13,7 @@
 namespace table_detection
 {
 
-struct Workspace
+struct Table
 {
   std::string frame_id;
   Eigen::Affine3d pose;
@@ -27,11 +27,13 @@ public:
 
   TableDetection();
 
+  Table getTable() { return table_; }
+
+  void run(const std::string& topic);
+
+  void stop();
+
   void detect(const sensor_msgs::PointCloud2& cloud_msg);
-
-  Workspace getWorkspace() { return workspace_; }
-
-  Workspace getTable() { return table_; }
 
 private:
 
@@ -52,12 +54,11 @@ private:
 
   void computeConvexHull();
 
-  void computeWorkspace();
+  void computeBounds();
 
   void publishMarkers();
 
 
-  std::string cloud_topic_in_;
   float voxel_grid_size_;
   Eigen::VectorXf crop_box_;
   Eigen::Vector3f up_vector_;
@@ -71,11 +72,9 @@ private:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_bounds_ptr_;
-  Workspace workspace_;
-  Workspace table_;
+  Table table_;
 
-  ros::NodeHandle nh_public_;
-  ros::NodeHandle nh_private_;
+  ros::NodeHandle nh_public_, nh_private_;
   ros::Subscriber sub_cloud_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
