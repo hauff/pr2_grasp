@@ -47,6 +47,9 @@ private:
   void initSolidPrimitive(const int& type, const std::vector<double>& dimensions,
     shape_msgs::SolidPrimitive& primitive);
 
+  std::string ns() { return "planning_scene_manager"; }
+  std::string name() { return "PlanningSceneManager"; }
+
   ros::NodeHandle nh_;
   ros::ServiceClient client_get_scene_;
   ros::ServiceClient client_apply_scene_;

@@ -36,8 +36,7 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 
 void TableDetection::run(const std::string& topic)
 {
-  sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(
-    topic, 10, &TableDetection::cloudCallback, this);
+  sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(topic, 1, &TableDetection::cloudCallback, this);
 }
 
 void TableDetection::stop()
@@ -61,13 +60,14 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
   computeConvexHull();
   computeBounds();
 
-  publishMarkers();
+  publish();
 }
 
 void TableDetection::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
 {
-  sensor_msgs::PointCloud2 cloud_msg;
+  ROS_INFO("[%s::%s]: Recived point cloud.", ns().c_str(), name().c_str());
 
+  sensor_msgs::PointCloud2 cloud_msg;
   transform(cloud_msg_ptr, cloud_msg);
   detect(cloud_msg);
 }
@@ -185,15 +185,19 @@ void TableDetection::computeBounds()
   table_.frame_id = cloud_filtered_ptr_->header.frame_id;
   table_.pose = Eigen::Affine3d::Identity();
   table_.pose.translation() = ((min + max) / 2).head(3).cast<double>();
-  table_.scale = (max - min).head(3).cast<double>();
+  table_.dimensions = (max - min).head(3).cast<double>();
 
-  table_.scale.x() += 0.02;
-  table_.scale.y() += 0.02;
-  table_.scale.z() += 0.02;
+  table_.dimensions.x() += 0.02;
+  table_.dimensions.y() += 0.02;
+  //table_.dimensions.z() += 0.02;
 }
 
-void TableDetection::publishMarkers()
+void TableDetection::publish()
 {
+  // Publish collision object.
+  scene_mgr_.addBoxCollisionObject(table_.frame_id, "table", table_.pose, table_.dimensions);
+
+  // Publish rviz markers.
   std::vector<Eigen::Vector3d> bounds(cloud_bounds_ptr_->size());
   for (size_t i = 0; i < cloud_bounds_ptr_->size(); i++)
   {
@@ -207,6 +211,8 @@ void TableDetection::publishMarkers()
     rviz_visualizer::GREEN, "Bounds");
 
   rviz_visualizer_ptr_->publish();
+
+  ROS_INFO("[%s::%s]: Published table.", ns().c_str(), name().c_str());
 }
 
 }

@@ -1,6 +1,7 @@
 #ifndef TABLE_DETECTION_TABLE_DETECTION_H
 #define TABLE_DETECTION_TABLE_DETECTION_H
 
+#include <planning_scene_manager/planning_scene_manager.h>
 #include <rviz_visualizer/rviz_visualizer.h>
 #include <ros/ros.h>
 #include <pcl/point_types.h>
@@ -17,7 +18,7 @@ struct Table
 {
   std::string frame_id;
   Eigen::Affine3d pose;
-  Eigen::Vector3d scale;
+  Eigen::Vector3d dimensions;
 };
 
 class TableDetection
@@ -56,7 +57,11 @@ private:
 
   void computeBounds();
 
-  void publishMarkers();
+  void publish();
+
+  std::string ns() { return "table_detection"; };
+
+  std::string name() { return "TableDetection"; };
 
 
   float voxel_grid_size_;
@@ -78,6 +83,8 @@ private:
   ros::Subscriber sub_cloud_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
+
+  planning_scene_manager::PlanningSceneManager scene_mgr_;
   rviz_visualizer::RvizVisualizer::Ptr rviz_visualizer_ptr_;
 
 };

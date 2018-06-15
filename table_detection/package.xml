@@ -7,13 +7,16 @@
 
   <maintainer email="hauffn@informatik.uni-freiburg.de">Nico Hauff</maintainer>
   <author email="hauffn@informatik.uni-freiburg.de">Nico Hauff</author>
+  <author email="eitel@cs.uni-freiburg.de">Andreas Eitel</author>
   <license>BSD</license>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
+  <build_depend>planning_scene_manager</build_depend>
   <build_depend>rviz_visualizer</build_depend>
   
   <run_depend>roscpp</run_depend>
+  <run_depend>planning_scene_manager</run_depend>
   <run_depend>rviz_visualizer</run_depend>
 
 </package>

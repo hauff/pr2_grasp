@@ -6,19 +6,18 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   tf2_ros
   tf2_sensor_msgs
-  tf2_geometry_msgs
   sensor_msgs
   geometry_msgs
+  shape_msgs
   visualization_msgs
-  pcl_conversions
+  #pcl_conversions
   eigen_conversions
 
-  moveit_core
-  moveit_ros_planning
+  #moveit_core
+  #moveit_ros_planning
   moveit_ros_planning_interface
   gpd
 
-  table_detection
   planning_scene_manager
   move_group_manager
 )
@@ -27,7 +26,7 @@ find_package(PCL 1.8 REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
-  INCLUDE_DIRS include
+# INCLUDE_DIRS include
 # LIBRARIES
   CATKIN_DEPENDS roscpp
 # DEPENDS

@@ -52,6 +52,7 @@ bool PlanningSceneManager::getCollisionObject(const std::string& object_id,
     }
   }
 
+  ROS_WARN("[%s::%s]: Could not find '%s' in planning scene.", ns().c_str(), name().c_str(), object_id.c_str());
   return false;
 }
 
