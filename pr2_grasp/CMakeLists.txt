@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   move_group_manager
 )
 
-find_package(PCL 1.8 REQUIRED)
+find_package(PCL 1.7 REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
