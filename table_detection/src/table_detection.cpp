@@ -189,7 +189,7 @@ void TableDetection::computeBounds()
 
   table_.dimensions.x() += 0.02;
   table_.dimensions.y() += 1.5;
-  //table_.dimensions.z() += 0.02;
+  table_.dimensions.z() = 0.005;
 }
 
 void TableDetection::publish()

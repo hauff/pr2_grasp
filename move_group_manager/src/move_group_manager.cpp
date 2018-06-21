@@ -7,7 +7,7 @@ namespace move_group_manager
 MoveGroupManager::MoveGroupManager()
 {
   nh_.setCallbackQueue(&call_back_queue_);
-  async_spinner_ptr_.reset(new ros::AsyncSpinner(8, &call_back_queue_));
+  async_spinner_ptr_.reset(new ros::AsyncSpinner(0, &call_back_queue_));
 
   moveit::planning_interface::MoveGroup::Options options_arm("right_arm", "robot_description", nh_);
   group_ptr_.reset(new moveit::planning_interface::MoveGroup(options_arm));
