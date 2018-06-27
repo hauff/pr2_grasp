@@ -40,12 +40,17 @@ private:
 
   void applyPlanningScene(const moveit_msgs::PlanningScene& scene);
 
+  void expandAllowedCollisionMatrix(moveit_msgs::AllowedCollisionMatrix& acm,
+    const std::string& entry, bool value = false);
+
   void addCollisionObject(const moveit_msgs::CollisionObject& object);
 
   void initHeader(const ros::Time& stamp, const std::string& frame_id, std_msgs::Header& header);
 
   void initSolidPrimitive(const int& type, const std::vector<double>& dimensions,
     shape_msgs::SolidPrimitive& primitive);
+
+  size_t find(const std::vector<std::string>& vector, const std::string& string);
 
   std::string ns() { return "planning_scene_manager"; }
   std::string name() { return "PlanningSceneManager"; }

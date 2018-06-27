@@ -20,16 +20,25 @@ void PlanningSceneManager::allowCollision(const std::string& id)
   moveit_msgs::AllowedCollisionMatrix acm;
   getAllowedCollisionMatrix(acm);
 
-  size_t index = std::find(acm.default_entry_names.begin(), acm.default_entry_names.end(), id) -
-    acm.default_entry_names.begin();
-
-  if (index >= acm.default_entry_names.size())
+  if (find(acm.entry_names, id) >= acm.entry_names.size())
   {
+    expandAllowedCollisionMatrix(acm, id);
+
     acm.default_entry_names.push_back(id);
     acm.default_entry_values.push_back(true);
   }
   else
-    acm.default_entry_values.at(index) = true;
+  {
+    size_t index = find(acm.default_entry_names, id);
+
+    if (index >= acm.default_entry_names.size())
+    {
+      acm.default_entry_names.push_back(id);
+      acm.default_entry_values.push_back(true);
+    }
+    else
+      acm.default_entry_values.at(index) = true;
+  }
 
   moveit_msgs::PlanningScene scene;
   scene.allowed_collision_matrix = acm;
@@ -131,6 +140,19 @@ void PlanningSceneManager::applyPlanningScene(const moveit_msgs::PlanningScene& 
   client_apply_scene_.call(srv);
 }
 
+void PlanningSceneManager::expandAllowedCollisionMatrix(moveit_msgs::AllowedCollisionMatrix& acm,
+  const std::string& name, bool value)
+{
+  for (size_t i = 0; i < acm.entry_names.size(); i++)
+    acm.entry_values[i].enabled.push_back(value);
+
+  acm.entry_names.push_back(name);
+
+  moveit_msgs::AllowedCollisionEntry entry;
+  entry.enabled.assign(acm.entry_names.size(), value);
+  acm.entry_values.push_back(entry);
+}
+
 void PlanningSceneManager::addCollisionObject(const moveit_msgs::CollisionObject& object)
 {
   moveit_msgs::PlanningScene scene;
@@ -151,6 +173,13 @@ void PlanningSceneManager::initSolidPrimitive(const int& type,
 {
   primitive.type = type;
   primitive.dimensions = dimensions;
+}
+
+size_t PlanningSceneManager::find(const std::vector<std::string>& vector, const std::string& string)
+{
+  size_t index = std::find(vector.begin(), vector.end(), string) - vector.begin();
+
+  return index;
 }
 
 }

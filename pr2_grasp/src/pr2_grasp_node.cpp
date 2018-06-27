@@ -102,7 +102,8 @@ bool grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
 
     Eigen::Affine3d object_pose = Eigen::Affine3d::Identity();
     object_pose.translation() << grasp.bottom.x, grasp.bottom.y, grasp.bottom.z;
-    scene_mgr.addBoxCollisionObject("odom_combined", "object", object_pose, Eigen::Vector3d(0.1, 0.1, 0.2));
+    //scene_mgr.addBoxCollisionObject("odom_combined", "object", object_pose, Eigen::Vector3d(0.1, 0.1, 0.2));
+		scene_mgr.addSphereCollisionObject("odom_combined", "object", object_pose, 0.1);
 
     Eigen::Matrix3d m;
     m <<
@@ -167,7 +168,6 @@ int main(int argc, char **argv)
 
   planning_scene_manager::PlanningSceneManager scene_mgr;
   move_group_manager::MoveGroupManager group_mgr;
-  scene_mgr.allowCollision("object");
 
   ros::Rate rate(5);
   while (ros::ok())
