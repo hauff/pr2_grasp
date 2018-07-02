@@ -103,7 +103,8 @@ bool grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
     Eigen::Affine3d object_pose = Eigen::Affine3d::Identity();
     object_pose.translation() << grasp.bottom.x, grasp.bottom.y, grasp.bottom.z;
     //scene_mgr.addBoxCollisionObject("odom_combined", "object", object_pose, Eigen::Vector3d(0.1, 0.1, 0.2));
-		scene_mgr.addSphereCollisionObject("odom_combined", "object", object_pose, 0.1);
+		scene_mgr.addSphereCollisionObject("odom_combined", "object", object_pose, 0.10);
+    scene_mgr.allowCollision("object");
 
     Eigen::Matrix3d m;
     m <<
@@ -208,6 +209,13 @@ int main(int argc, char **argv)
       geometry_msgs::Pose pose = object.primitive_poses.at(0);
       pose.position.z += object.primitives.at(0).dimensions.at(2) / 2 + 0.3;
       pose.position.x -= 0.15;
+      // Rotate end pose by 90 DEGREES around pitch axis
+      tf::Quaternion pitch_rotation = tf::createQuaternionFromRPY(0.0, M_PI/2.0, 0);
+      pitch_rotation.normalize();
+      tf::Quaternion pose_orientation;
+      tf::quaternionMsgToTF(pose.orientation, pose_orientation); 
+      tf::Quaternion rotated_pose_orientation = pitch_rotation*pose_orientation;
+      tf::quaternionTFToMsg(rotated_pose_orientation, pose.orientation);
 
       moveit::planning_interface::MoveGroup::Plan plan;
       if (group_mgr.plan("odom_combined", "r_wrist_roll_link", pose, plan))
