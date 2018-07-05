@@ -70,7 +70,7 @@ bool set_gpd_params(ros::NodeHandle& nh_public, const Eigen::Vector3d& sensor_po
   tf::poseMsgToEigen(table_pose, pose);
   Eigen::Vector3d dimensions(table_dimensions.at(0), table_dimensions.at(1), table_dimensions.at(2));
 
-  Eigen::Vector3d ws_min = pose.translation() - 0.5 * dimensions + Eigen::Vector3d(0, 0, dimensions.z());
+  Eigen::Vector3d ws_min = pose.translation() - 0.5 * dimensions + Eigen::Vector3d(0, 0, dimensions.z() + 0.03);
   Eigen::Vector3d ws_max = pose.translation() + 0.5 * dimensions + Eigen::Vector3d(0, 0, dimensions.z() + 0.5);
 
   gpd::SetParameters set_params_srv;
@@ -116,7 +116,7 @@ bool grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager
     tf::quaternionEigenToMsg(Eigen::Quaterniond(m), grasp_pose.orientation);
 
     Eigen::Vector3d wrist =
-      Eigen::Vector3d(grasp.approach.x, grasp.approach.y, grasp.approach.z) * -0.15 +
+      Eigen::Vector3d(grasp.approach.x, grasp.approach.y, grasp.approach.z) * -0.14 +
       Eigen::Vector3d(grasp.bottom.x, grasp.bottom.y, grasp.bottom.z);
     grasp_pose.position.x = wrist.x();
     grasp_pose.position.y = wrist.y();
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
   nh_clouds.setCallbackQueue(&queue_clouds);
   nh_grasps.setCallbackQueue(&queue_grasps);
 
-  std::string topic_clouds_in = "/move_group/filtered_cloud";
+  std::string topic_clouds_in = "/filtered_cloud";
   std::string topic_clouds_out = "/pr2_grasp/point_cloud";
   std::string topic_grasps_in = "/detect_grasps/clustered_grasps";
 
@@ -206,11 +206,11 @@ int main(int argc, char **argv)
       if(!scene_mgr.getCollisionObject("placing_bin", object))
         return EXIT_FAILURE;
 
-      geometry_msgs::Pose pose = object.primitive_poses.at(0);
+      geometry_msgs::Pose pose = object.primitive_poses.at(0);\
       pose.position.z += object.primitives.at(0).dimensions.at(2) / 2 + 0.3;
       pose.position.x -= 0.15;
       // Rotate end pose by 90 DEGREES around pitch axis
-      tf::Quaternion pitch_rotation = tf::createQuaternionFromRPY(0.0, M_PI/2.0, 0);
+      tf::Quaternion pitch_rotation = tf::createQuaternionFromRPY(0.0, M_PI/4.0, 0);
       pitch_rotation.normalize();
       tf::Quaternion pose_orientation;
       tf::quaternionMsgToTF(pose.orientation, pose_orientation); 
