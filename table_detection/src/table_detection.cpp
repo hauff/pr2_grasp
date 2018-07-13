@@ -47,13 +47,15 @@ void TableDetection::stop()
 void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 {
   pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
-
-  cloud_filtered_ptr_->clear();
+  *cloud_filtered_ptr_ += *cloud_ptr_;
+  //cloud_filtered_ptr_->clear();
+  
   cloud_bounds_ptr_->clear();
   inlier_ptr_->indices.clear();
 
   downsample();
   cropBox();
+
   estimatePlaneCoeffs();
   extractCluster();
   projectPointCloudToModel();
@@ -89,11 +91,11 @@ void TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_m
 
 void TableDetection::downsample()
 {
-  if (cloud_ptr_->empty())
+  if (cloud_filtered_ptr_->empty())
     return;
 
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
-  vg.setInputCloud(cloud_ptr_);
+  vg.setInputCloud(cloud_filtered_ptr_);
   vg.setLeafSize(voxel_grid_size_, voxel_grid_size_, voxel_grid_size_);
   vg.filter(*cloud_filtered_ptr_);
 }
@@ -187,9 +189,9 @@ void TableDetection::computeBounds()
   table_.pose.translation() = ((min + max) / 2).head(3).cast<double>();
   table_.dimensions = (max - min).head(3).cast<double>();
 
-  table_.dimensions.x() += 0.02;
-  table_.dimensions.y() += 1.5;
-  table_.dimensions.z() = 0.005;
+  //table_.dimensions.x() += 0.02;
+  //table_.dimensions.y() += 1.5;
+  //table_.dimensions.z() = 0.005;
 }
 
 void TableDetection::publish()
