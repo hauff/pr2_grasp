@@ -93,11 +93,12 @@ void TableDetection::downsample()
 {
   if (cloud_filtered_ptr_->empty())
     return;
-
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
   vg.setInputCloud(cloud_filtered_ptr_);
   vg.setLeafSize(voxel_grid_size_, voxel_grid_size_, voxel_grid_size_);
-  vg.filter(*cloud_filtered_ptr_);
+  vg.filter(*tmp);
+  pcl::copyPointCloud(*tmp,*cloud_filtered_ptr_);
 }
 
 void TableDetection::cropBox()

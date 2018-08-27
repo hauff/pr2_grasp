@@ -1,5 +1,7 @@
 # pr2_grasp
 
+##NOTE##  Compile with PCL 1.7, problems with PCL 1.8
+
 An experimental playground.
 
 ```
