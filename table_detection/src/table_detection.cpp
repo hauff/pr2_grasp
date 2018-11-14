@@ -47,11 +47,10 @@ void TableDetection::stop()
 
 void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 {
-  cloud_filtered_ptr_->header.frame_id = cloud_bounds_ptr_->header.frame_id = "odom_combined";
-
   pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
+
+  cloud_filtered_ptr_->header = cloud_ptr_->header;
   *cloud_filtered_ptr_ += *cloud_ptr_;
-  //cloud_filtered_ptr_->clear();
   
   cloud_bounds_ptr_->clear();
   inlier_ptr_->indices.clear();
@@ -83,38 +82,13 @@ bool TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_m
 {
   try
   {
-    /*
-    bool can_transform = tf_buffer_.canTransform("odom_combined", cloud_msg_ptr->header.frame_id,
-      cloud_msg_ptr->header.stamp);
-
-    if (!can_transform)
-    {
-      ROS_ERROR("[%s::%s]: No transformation from '%s' to '%s'.", ns().c_str(), name().c_str(),
-        cloud_msg_ptr->header.frame_id.c_str(), "odom_combined");
-
-      return false;
-    }
-    */
-
     geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
       "odom_combined", cloud_msg_ptr->header.frame_id, cloud_msg_ptr->header.stamp);
     tf2::doTransform(*cloud_msg_ptr, cloud_msg, transform);
-
-    ROS_WARN("frame: %s", cloud_msg.header.frame_id.c_str());
-
-    if (cloud_msg.header.frame_id.empty())
-    {
-      ROS_ERROR("[%s::%s]: No transformation from '%s' to '%s'.", ns().c_str(), name().c_str(),
-        cloud_msg_ptr->header.frame_id.c_str(), "odom_combined");
-
-      return false;
-    }
-
   }
   catch (tf2::TransformException &ex)
   {
     ROS_WARN("%s", ex.what());
-
     return false;
   }
 
@@ -125,12 +99,15 @@ void TableDetection::downsample()
 {
   if (cloud_filtered_ptr_->empty())
     return;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZRGB>);
+
+  pcl::PointCloud<pcl::PointXYZRGB> tmp;
+
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
   vg.setInputCloud(cloud_filtered_ptr_);
   vg.setLeafSize(voxel_grid_size_, voxel_grid_size_, voxel_grid_size_);
-  vg.filter(*tmp);
-  pcl::copyPointCloud(*tmp,*cloud_filtered_ptr_);
+  vg.filter(tmp);
+
+  pcl::copyPointCloud(tmp, *cloud_filtered_ptr_);
 }
 
 void TableDetection::cropBox()
@@ -143,6 +120,9 @@ void TableDetection::cropBox()
   cb.setMin(Eigen::Vector4f(crop_box_[0], crop_box_[2], crop_box_[4], 0));
   cb.setMax(Eigen::Vector4f(crop_box_[1], crop_box_[3], crop_box_[5], 0));
   cb.filter(inlier_ptr_->indices);
+
+  ROS_WARN("frame: %s", cloud_filtered_ptr_->header.frame_id.c_str());
+  ROS_WARN("frame: %d", inlier_ptr_->indices.empty());
 }
 
 void TableDetection::estimatePlaneCoeffs()
@@ -201,12 +181,13 @@ void TableDetection::computeConvexHull()
   if (cloud_bounds_ptr_->empty())
     return;
 
+  pcl::PointCloud<pcl::PointXYZRGB> tmp;
+
   pcl::ConvexHull<pcl::PointXYZRGB> ch;
   ch.setInputCloud(cloud_bounds_ptr_);
+  ch.reconstruct(tmp);
 
-  pcl::PointCloud<pcl::PointXYZRGB> cloud_tmp;
-  ch.reconstruct(cloud_tmp);
-  pcl::copyPointCloud(cloud_tmp, *cloud_bounds_ptr_);
+  pcl::copyPointCloud(tmp, *cloud_bounds_ptr_);
 }
 
 void TableDetection::computeBounds()
@@ -229,6 +210,9 @@ void TableDetection::computeBounds()
 
 void TableDetection::publish()
 {
+  if (cloud_bounds_ptr_->empty())
+    return;
+  
   // Publish collision object.
   scene_mgr_.addBoxCollisionObject(table_.frame_id, "table", table_.pose, table_.dimensions);
 
