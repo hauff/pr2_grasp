@@ -36,6 +36,7 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 
 void TableDetection::run(const std::string& topic)
 {
+  ROS_INFO("[%s::%s]: Subscribe to topic '%s'", ns().c_str(), name().c_str(), topic.c_str());
   sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(topic, 1, &TableDetection::cloudCallback, this);
 }
 
@@ -46,6 +47,8 @@ void TableDetection::stop()
 
 void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 {
+  cloud_filtered_ptr_->header.frame_id = cloud_bounds_ptr_->header.frame_id = "odom_combined";
+
   pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
   *cloud_filtered_ptr_ += *cloud_ptr_;
   //cloud_filtered_ptr_->clear();
@@ -67,26 +70,55 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 
 void TableDetection::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
 {
-  ROS_INFO("[%s::%s]: Recived point cloud.", ns().c_str(), name().c_str());
+  ROS_INFO("[%s::%s]: Recived point cloud with frame id '%s'.", ns().c_str(), name().c_str(),
+    cloud_msg_ptr->header.frame_id.c_str());
 
   sensor_msgs::PointCloud2 cloud_msg;
-  transform(cloud_msg_ptr, cloud_msg);
-  detect(cloud_msg);
+  if (transform(cloud_msg_ptr, cloud_msg))
+    detect(cloud_msg);
 }
 
-void TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
+bool TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
   sensor_msgs::PointCloud2& cloud_msg)
 {
   try
   {
+    /*
+    bool can_transform = tf_buffer_.canTransform("odom_combined", cloud_msg_ptr->header.frame_id,
+      cloud_msg_ptr->header.stamp);
+
+    if (!can_transform)
+    {
+      ROS_ERROR("[%s::%s]: No transformation from '%s' to '%s'.", ns().c_str(), name().c_str(),
+        cloud_msg_ptr->header.frame_id.c_str(), "odom_combined");
+
+      return false;
+    }
+    */
+
     geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
       "odom_combined", cloud_msg_ptr->header.frame_id, cloud_msg_ptr->header.stamp);
     tf2::doTransform(*cloud_msg_ptr, cloud_msg, transform);
+
+    ROS_WARN("frame: %s", cloud_msg.header.frame_id.c_str());
+
+    if (cloud_msg.header.frame_id.empty())
+    {
+      ROS_ERROR("[%s::%s]: No transformation from '%s' to '%s'.", ns().c_str(), name().c_str(),
+        cloud_msg_ptr->header.frame_id.c_str(), "odom_combined");
+
+      return false;
+    }
+
   }
   catch (tf2::TransformException &ex)
   {
     ROS_WARN("%s", ex.what());
+
+    return false;
   }
+
+  return true;
 }
 
 void TableDetection::downsample()
@@ -215,7 +247,8 @@ void TableDetection::publish()
 
   rviz_visualizer_ptr_->publish();
 
-  ROS_INFO("[%s::%s]: Published table.", ns().c_str(), name().c_str());
+  ROS_INFO("[%s::%s]: Published table with frame id '%s'.", ns().c_str(), name().c_str(),
+    table_.frame_id.c_str());
 }
 
 }

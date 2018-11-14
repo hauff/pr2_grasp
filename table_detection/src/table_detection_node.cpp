@@ -8,7 +8,8 @@ int main(int argc, char **argv)
 
   table_detection::TableDetection table_detection;
   //table_detection.run("/head_mount_kinect2/depth_registered/points");
-  table_detection.run("/camera/depth_registered/points");
+  table_detection.run("/head_mount_asus/depth_registered/points");
+  //table_detection.run("/camera/depth_registered/points");
 
   ros::spin();
 

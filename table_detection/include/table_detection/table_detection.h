@@ -40,7 +40,7 @@ private:
 
   void cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr);
 
-  void transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
+  bool transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
     sensor_msgs::PointCloud2& cloud_msg);
 
   void downsample();
