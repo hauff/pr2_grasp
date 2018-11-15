@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+  <arg name="topic_in"/>
+
+  <node name="table_detection" pkg="table_detection" type="table_detection_node" output="screen">
+    <rosparam param="topic_in" subst_value="True">$(arg topic_in)</rosparam>
+  </node>
+
+</launch>

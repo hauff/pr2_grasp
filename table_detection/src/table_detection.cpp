@@ -38,6 +38,7 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 
 void TableDetection::run(const std::string& topic)
 {
+  ROS_INFO("[%s::%s]: Subscribe to topic '%s'", ns().c_str(), name().c_str(), topic.c_str());
   sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(topic, 1, &TableDetection::cloudCallback, this);
 }
 
@@ -50,12 +51,15 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 {
   pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
 
-  cloud_filtered_ptr_->clear();
+  cloud_filtered_ptr_->header = cloud_ptr_->header;
+  *cloud_filtered_ptr_ += *cloud_ptr_;
+  
   cloud_bounds_ptr_->clear();
   inlier_ptr_->indices.clear();
 
   downsample();
   cropBox();
+
   estimatePlaneCoeffs();
   extractCluster();
   projectPointCloudToModel();
@@ -67,14 +71,15 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 
 void TableDetection::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
 {
-  ROS_INFO("[%s::%s]: Recived point cloud.", ns().c_str(), name().c_str());
+  ROS_INFO("[%s::%s]: Recived point cloud with frame id '%s'.", ns().c_str(), name().c_str(),
+    cloud_msg_ptr->header.frame_id.c_str());
 
   sensor_msgs::PointCloud2 cloud_msg;
-  transform(cloud_msg_ptr, cloud_msg);
-  detect(cloud_msg);
+  if (transform(cloud_msg_ptr, cloud_msg))
+    detect(cloud_msg);
 }
 
-void TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
+bool TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
   sensor_msgs::PointCloud2& cloud_msg)
 {
   try
@@ -86,18 +91,25 @@ void TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_m
   catch (tf2::TransformException &ex)
   {
     ROS_WARN("%s", ex.what());
+    return false;
   }
+
+  return true;
 }
 
 void TableDetection::downsample()
 {
-  if (cloud_ptr_->empty())
+  if (cloud_filtered_ptr_->empty())
     return;
 
+  pcl::PointCloud<pcl::PointXYZRGB> tmp;
+
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
-  vg.setInputCloud(cloud_ptr_);
+  vg.setInputCloud(cloud_filtered_ptr_);
   vg.setLeafSize(voxel_grid_size_, voxel_grid_size_, voxel_grid_size_);
-  vg.filter(*cloud_filtered_ptr_);
+  vg.filter(tmp);
+
+  pcl::copyPointCloud(tmp, *cloud_filtered_ptr_);
 }
 
 void TableDetection::cropBox()
@@ -110,6 +122,9 @@ void TableDetection::cropBox()
   cb.setMin(Eigen::Vector4f(crop_box_[0], crop_box_[2], crop_box_[4], 0));
   cb.setMax(Eigen::Vector4f(crop_box_[1], crop_box_[3], crop_box_[5], 0));
   cb.filter(inlier_ptr_->indices);
+
+  ROS_WARN("frame: %s", cloud_filtered_ptr_->header.frame_id.c_str());
+  ROS_WARN("frame: %d", inlier_ptr_->indices.empty());
 }
 
 void TableDetection::estimatePlaneCoeffs()
@@ -168,12 +183,13 @@ void TableDetection::computeConvexHull()
   if (cloud_bounds_ptr_->empty())
     return;
 
+  pcl::PointCloud<pcl::PointXYZRGB> tmp;
+
   pcl::ConvexHull<pcl::PointXYZRGB> ch;
   ch.setInputCloud(cloud_bounds_ptr_);
+  ch.reconstruct(tmp);
 
-  pcl::PointCloud<pcl::PointXYZRGB> cloud_tmp;
-  ch.reconstruct(cloud_tmp);
-  pcl::copyPointCloud(cloud_tmp, *cloud_bounds_ptr_);
+  pcl::copyPointCloud(tmp, *cloud_bounds_ptr_);
 }
 
 void TableDetection::computeBounds()
@@ -189,13 +205,16 @@ void TableDetection::computeBounds()
   table_.pose.translation() = ((min + max) / 2).head(3).cast<double>();
   table_.dimensions = (max - min).head(3).cast<double>();
 
-  table_.dimensions.x() += 0.02;
-  table_.dimensions.y() += 1.5;
+  //table_.dimensions.x() += 0.02;
+  //table_.dimensions.y() += 1.5;
   table_.dimensions.z() = 0.005;
 }
 
 void TableDetection::publish()
 {
+  if (cloud_bounds_ptr_->empty())
+    return;
+  
   // Publish collision object.
   scene_mgr_.addBoxCollisionObject(table_.frame_id, "table", table_.pose, table_.dimensions);
 
@@ -214,7 +233,8 @@ void TableDetection::publish()
 
   rviz_visualizer_ptr_->publish();
 
-  ROS_INFO("[%s::%s]: Published table.", ns().c_str(), name().c_str());
+  ROS_INFO("[%s::%s]: Published table with frame id '%s'.", ns().c_str(), name().c_str(),
+    table_.frame_id.c_str());
 }
 
 }

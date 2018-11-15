@@ -116,6 +116,8 @@ int MoveGroupManager::pick(const geometry_msgs::Pose& grasp_pose, const geometry
   grasp.grasp_posture.points[0].positions[4] = 0.002;
   grasp.grasp_posture.points[0].positions[5] = 0.002;
 
+  // max_contact_force
+
   async_spinner_ptr_->start();
   group_ptr_->setSupportSurfaceName("table");
   moveit_msgs::MoveItErrorCodes result = group_ptr_->pick("object", grasp);
