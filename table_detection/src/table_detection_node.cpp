@@ -6,6 +6,9 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "table_detection");
   ros::NodeHandle nh_public, nh_private("~");
 
+
+  ROS_ERROR("Running ....");
+
   std::string param_topic_in = "topic_in";
   if (!nh_private.hasParam(param_topic_in))
   {

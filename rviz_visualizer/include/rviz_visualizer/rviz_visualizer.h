@@ -5,6 +5,7 @@
 #include <std_msgs/ColorRGBA.h>
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <visualization_msgs/Marker.h>
 #include <Eigen/Geometry>
 
 namespace rviz_visualizer

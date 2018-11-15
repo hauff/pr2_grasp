@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   gpd
 )
 
-find_package(PCL REQUIRED)
+find_package(PCL 1.7 REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(

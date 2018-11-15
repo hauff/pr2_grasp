@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   rviz_visualizer
 )
 
-find_package(PCL REQUIRED)
+find_package(PCL 1.7 REQUIRED)
 #set(PCL_INCLUDE_DIRS /usr/local/include/pcl-1.8)
 add_definitions(${PCL_DEFINITIONS})
 

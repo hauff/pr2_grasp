@@ -48,8 +48,12 @@ void TableDetection::stop()
 
 void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 {
+	ROS_INFO("Detect...");
+
   pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
 
+  ROS_ERROR("cloud_ptr_ %d", cloud_ptr_->empty());
+  
   cloud_filtered_ptr_->header = cloud_ptr_->header;
   *cloud_filtered_ptr_ += *cloud_ptr_;
   
@@ -65,6 +69,8 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
   computeConvexHull();
   computeBounds();
 
+	
+
   publish();
 }
 
@@ -73,14 +79,18 @@ void TableDetection::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& clo
   ROS_INFO("[%s::%s]: Recived point cloud with frame id '%s'.", ns().c_str(), name().c_str(),
     cloud_msg_ptr->header.frame_id.c_str());
 
+	ROS_INFO("Callback...");
+
   sensor_msgs::PointCloud2 cloud_msg;
-  if (transform(cloud_msg_ptr, cloud_msg))
-    detect(cloud_msg);
+  transform(cloud_msg_ptr, cloud_msg);
+  detect(cloud_msg);
 }
 
 bool TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
   sensor_msgs::PointCloud2& cloud_msg)
 {
+  ROS_INFO("Transform...");
+
   try
   {
     geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
@@ -98,21 +108,27 @@ bool TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_m
 
 void TableDetection::downsample()
 {
+  ROS_ERROR("cloud_filtered %d", cloud_filtered_ptr_->empty());
   if (cloud_filtered_ptr_->empty())
     return;
 
-  pcl::PointCloud<pcl::PointXYZRGB> tmp;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZRGB>);
 
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
   vg.setInputCloud(cloud_filtered_ptr_);
   vg.setLeafSize(voxel_grid_size_, voxel_grid_size_, voxel_grid_size_);
-  vg.filter(tmp);
+  vg.filter(*tmp);
 
-  pcl::copyPointCloud(tmp, *cloud_filtered_ptr_);
+  ROS_ERROR("downsample tmp %d", tmp->empty());
+
+  pcl::copyPointCloud(*tmp, *cloud_filtered_ptr_);
+
+  ROS_ERROR("downsample cloud_filtered %d", cloud_filtered_ptr_->empty());
 }
 
 void TableDetection::cropBox()
 {
+  ROS_ERROR("cloud_filtered %d", cloud_filtered_ptr_->empty());
   if (cloud_filtered_ptr_->empty())
     return;
 
@@ -193,7 +209,8 @@ void TableDetection::computeConvexHull()
 
 void TableDetection::computeBounds()
 {
-  if (inlier_ptr_->indices.empty() || cloud_filtered_ptr_->empty())
+  ROS_ERROR("inlier %d, cloud_filtered %d", inlier_ptr_->indices.empty(), cloud_filtered_ptr_->empty());
+	if (inlier_ptr_->indices.empty() || cloud_filtered_ptr_->empty())
     return;
 
   Eigen::Vector4f min, max;
@@ -211,8 +228,9 @@ void TableDetection::computeBounds()
 
 void TableDetection::publish()
 {
-  if (cloud_bounds_ptr_->empty())
-    return;
+ ROS_WARN("Publish..."); 
+ //if (cloud_bounds_ptr_->empty())
+   // return;
   
   // Publish collision object.
   scene_mgr_.addBoxCollisionObject(table_.frame_id, "table", table_.pose, table_.dimensions);
