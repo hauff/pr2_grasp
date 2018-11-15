@@ -16,19 +16,19 @@ find_package(catkin REQUIRED COMPONENTS
   #moveit_core
   #moveit_ros_planning
   moveit_ros_planning_interface
-  gpd
 
   planning_scene_manager
   move_group_manager
+  gpd
 )
 
-find_package(PCL 1.8 REQUIRED)
+find_package(PCL REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
 # INCLUDE_DIRS include
 # LIBRARIES
-  CATKIN_DEPENDS roscpp
+  CATKIN_DEPENDS roscpp planning_scene_manager move_group_manager gpd
 # DEPENDS
 )
 
@@ -39,4 +39,5 @@ include_directories(
 )
 
 add_executable(pr2_grasp_node src/pr2_grasp_node.cpp)
+add_dependencies(pr2_grasp_node gpd_generate_messages_cpp)
 target_link_libraries(pr2_grasp_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})

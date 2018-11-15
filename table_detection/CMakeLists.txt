@@ -23,7 +23,7 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES table_detection
   CATKIN_DEPENDS roscpp planning_scene_manager rviz_visualizer
-# DEPENDS
+  # DEPENDS
 )
 
 include_directories(
