@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   rviz_visualizer
 )
 
-find_package(PCL 1.7 REQUIRED)
+find_package(PCL 1.8 REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
