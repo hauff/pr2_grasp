@@ -145,7 +145,7 @@ int main(int argc, char **argv)
   nh_grasps.setCallbackQueue(&queue_grasps);
 
   //std::string topic_clouds_in = "/filtered_cloud";
-  std::string topic_clouds_in = "/head_mount_kinect2/depth_registered/points";
+  std::string topic_clouds_in = "/head_mount_asus/depth_registered/points";
   std::string topic_clouds_out = "/pr2_grasp/point_cloud";
   std::string topic_grasps_in = "/detect_grasps/clustered_grasps";
 
