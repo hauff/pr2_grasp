@@ -17,10 +17,6 @@
 
 #include <eigen_conversions/eigen_msg.h>
 
-#include <gpd/GraspConfig.h>
-#include <gpd/GraspConfigList.h>
-#include <gpd/SetParameters.h>
-
 #include <moveit/move_group_interface/move_group.h>
 //#include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit_msgs/CollisionObject.h>
@@ -28,6 +24,9 @@
 //#include <moveit_msgs/ApplyPlanningScene.h>
 //#include <moveit_msgs/AllowedCollisionMatrix.h>
 
+#include <gpd/GraspConfig.h>
+#include <gpd/GraspConfigList.h>
+#include <gpd/SetParameters.h>
 
 bool transform_cloud(tf2_ros::Buffer& tf_buffer, const sensor_msgs::PointCloud2& cloud_msg_in,
   sensor_msgs::PointCloud2& cloud_msg_out, Eigen::Vector3d& sensor_pos)

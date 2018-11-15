@@ -3,10 +3,6 @@
 An experimental playground.
 
 ```
-git clone https://github.com/ros-perception/perception_pcl.git -b indigo-devel
-```
-
-```
 roslaunch pr2_gazebo pr2_empty_world.launch
 roslaunch pr2_teleop_general pr2_teleop_general_keyboard.launch
 roslaunch pr2_moveit_config warehouse.launch moveit_warehouse_database_path:=~/warehouse_db
@@ -18,6 +14,15 @@ roslaunch gpd tutorial1.launch
 roslaunch planning_scene_manager add_collision_box.launch
 rosrun table_detection table_detection_node
 rosrun pr2_grasp pr2_grasp_node
+```
+
+```
+<param name="$(arg node)/finger_width" value="0.01" />
+<!-- <param name="$(arg node)/hand_outer_diameter" value="0.09" /> -->
+<param name="$(arg node)/hand_outer_diameter" value="0.12" /> 
+<param name="$(arg node)/hand_depth" value="0.06" />
+<param name="$(arg node)/hand_height" value="0.02" />
+<param name="$(arg node)/init_bite" value="0.01" />
 ```
 
 ```

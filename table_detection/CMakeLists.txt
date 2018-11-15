@@ -15,15 +15,14 @@ find_package(catkin REQUIRED COMPONENTS
   rviz_visualizer
 )
 
-find_package(PCL 1.8 REQUIRED)
-#set(PCL_INCLUDE_DIRS /usr/local/include/pcl-1.8)
+find_package(PCL REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES table_detection
   CATKIN_DEPENDS roscpp planning_scene_manager rviz_visualizer
-# DEPENDS
+  # DEPENDS
 )
 
 include_directories(
