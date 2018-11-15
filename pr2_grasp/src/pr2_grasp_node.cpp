@@ -145,7 +145,8 @@ int main(int argc, char **argv)
   nh_clouds.setCallbackQueue(&queue_clouds);
   nh_grasps.setCallbackQueue(&queue_grasps);
 
-  std::string topic_clouds_in = "/filtered_cloud";
+  //std::string topic_clouds_in = "/filtered_cloud";
+  std::string topic_clouds_in = "/head_mount_kinect2/depth_registered/points";
   std::string topic_clouds_out = "/pr2_grasp/point_cloud";
   std::string topic_grasps_in = "/detect_grasps/clustered_grasps";
 
@@ -206,7 +207,7 @@ int main(int argc, char **argv)
       if(!scene_mgr.getCollisionObject("placing_bin", object))
         return EXIT_FAILURE;
 
-      geometry_msgs::Pose pose = object.primitive_poses.at(0);\
+      geometry_msgs::Pose pose = object.primitive_poses.at(0);
       pose.position.z += object.primitives.at(0).dimensions.at(2) / 2 + 0.3;
       pose.position.x -= 0.15;
       // Rotate end pose by 90 DEGREES around pitch axis
@@ -231,128 +232,3 @@ int main(int argc, char **argv)
 
   return EXIT_SUCCESS;
 }
-    /*
-    ROS_INFO("Wait for point cloud.");
-    cloud_msg.data.clear();
-    while (ros::ok() && cloud_msg.data.empty())
-    {
-      ros::spinOnce();
-      rate.sleep();
-    }
-
-    ROS_INFO("Set gpd parameters and publish point cloud.");
-    set_gpd_params(nh_public, sensor_pos, workspace);
-    pub_clouds.publish(cloud_msg);
-
-    ROS_INFO("Wait for grasps.");
-    grasp_config_list.grasps.clear();
-    is_grasp_recived = false;
-    while (ros::ok() && !is_grasp_recived)
-    {
-      ros::spinOnce();
-      rate.sleep();
-    }
-
-    ROS_INFO("Num grasps: %lu", grasp_config_list.grasps.size());
-
-    ROS_INFO("Try to grasp object.");
-    if (grasp(grasp_config_list, scene_mgr, group_mgr))
-    {
-      ROS_INFO("Try to place object.");
-      geometry_msgs::Pose place_pose;
-      place_pose.orientation.w = 1;
-      place_pose.position.x = 1.15;
-      place_pose.position.y = -0.53;
-      place_pose.position.z = 1.2;
-
-      moveit::planning_interface::MoveGroup::Plan plan;
-      if (group_mgr.plan("odom_combined", "r_wrist_roll_link", place_pose, plan))
-      {
-        group_mgr.execute(plan);
-        group_mgr.openGripper();
-        
-      }
-      else
-        exit(1);
-    }
-
-    rate.sleep();
-    */
-
-
-/*
-void set_gpd_params(ros::NodeHandle& nh_public, const Eigen::Vector3d& sensor_pos,
-  const table_detection::Table& workspace)
-{
-  // TODO: there is no workspace
-  Eigen::Vector3d ws_min = workspace.pose.translation() - 0.5 * workspace.dimensions;
-  Eigen::Vector3d ws_max = workspace.pose.translation() + 0.5 * workspace.dimensions;
-
-  gpd::SetParameters set_params_srv;
-
-  set_params_srv.request.set_workspace = true;
-  set_params_srv.request.workspace[0] = ws_min[0];
-  set_params_srv.request.workspace[1] = ws_max[0];
-  set_params_srv.request.workspace[2] = ws_min[1];
-  set_params_srv.request.workspace[3] = ws_max[1];
-  set_params_srv.request.workspace[4] = ws_min[2];
-  set_params_srv.request.workspace[5] = ws_max[2];
-
-  set_params_srv.request.set_camera_position = true;
-  set_params_srv.request.camera_position[0] = sensor_pos[0];
-  set_params_srv.request.camera_position[1] = sensor_pos[1];
-  set_params_srv.request.camera_position[2] = sensor_pos[2];
-
-  ros::ServiceClient client_gpd = nh_public.serviceClient<gpd::SetParameters>("/gpd/set_params");
-  bool success = client_gpd.call(set_params_srv);
-}
-
-bool quaternion_from_vectors(const geometry_msgs::Vector3& col_0, const geometry_msgs::Vector3& col_1,
-  const geometry_msgs::Vector3& col_2, geometry_msgs::Quaternion& quaternion)
-{
-  Eigen::Matrix3d m;
-  m <<
-    col_0.x, col_1.x, col_2.x,
-    col_0.y, col_1.y, col_2.y,
-    col_0.z, col_1.z, col_2.z;
-
-  tf::quaternionEigenToMsg(Eigen::Quaterniond(m), quaternion);
-}
-
-bool grasp(const gpd::GraspConfigList& grasp_config_list, planning_scene_manager::PlanningSceneManager scene_mgr,
-  move_group_manager::MoveGroupManager& group_mgr)
-{
-  for (size_t i = 0; i < grasp_config_list.grasps.size(); i++)
-  {
-    const gpd::GraspConfig& grasp = grasp_config_list.grasps[i];
-
-    Eigen::Affine3d object_pose = Eigen::Affine3d::Identity();
-    object_pose.translation() << grasp.bottom.x, grasp.bottom.y, grasp.bottom.z;
-    scene_mgr.addBoxCollisionObject("odom_combined", "object", object_pose, Eigen::Vector3d(0.1, 0.1, 0.2));
-
-    geometry_msgs::Pose grasp_pose;
-    quaternion_from_vectors(grasp.approach, grasp.binormal, grasp.axis, grasp_pose.orientation);
-
-    Eigen::Vector3d wrist =
-      Eigen::Vector3d(grasp.approach.x, grasp.approach.y, grasp.approach.z) * -0.15 +
-      Eigen::Vector3d(grasp.bottom.x, grasp.bottom.y, grasp.bottom.z);
-    grasp_pose.position.x = wrist.x();
-    grasp_pose.position.y = wrist.y();
-    grasp_pose.position.z = wrist.z();
-
-    int result = group_mgr.pick(grasp_pose, grasp.approach);
-    //scene_mgr.removeCollisionObject("r_wist_roll_link", "object");
-
-    if (result == 1)
-      return true;
-
-    if (result != -1)
-    {
-      std::cout << "Error code: " << result << std::endl;
-      exit(1);
-    }
-  }
-
-  return false;
-}
-*/
