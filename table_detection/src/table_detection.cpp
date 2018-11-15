@@ -7,10 +7,6 @@
 #include <pcl/filters/project_inliers.h>
 #include <pcl/surface/convex_hull.h>
 #include <pcl/search/impl/kdtree.hpp>
-<<<<<<< HEAD
-
-=======
->>>>>>> 357f6060ce5aa78c3acee033867b29d3fb79ac7c
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <geometry_msgs/TransformStamped.h>
