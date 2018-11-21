@@ -6,18 +6,14 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "table_detection");
   ros::NodeHandle nh_public, nh_private("~");
 
+  std::string topic_in;
+  nh_private.param<std::string>("topic_in", topic_in, "");
 
-  ROS_ERROR("Running ....");
-
-  std::string param_topic_in = "topic_in";
-  if (!nh_private.hasParam(param_topic_in))
+  if (topic_in.empty())
   {
-    ROS_ERROR("Parameter missing: %s", param_topic_in.c_str());
+    ROS_ERROR("Parameter missing: 'topic_in'");
     return EXIT_FAILURE;
   }
-
-  std::string topic_in;
-  nh_private.param<std::string>(param_topic_in, topic_in, "");
 
   table_detection::TableDetection table_detection;
   table_detection.run(topic_in);

@@ -6,7 +6,6 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/filters/project_inliers.h>
 #include <pcl/surface/convex_hull.h>
-//#include <pcl/search/impl/kdtree.hpp>
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -16,19 +15,24 @@ namespace table_detection
 
 TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 {
-  voxel_grid_size_ = 0.02;
-  crop_box_.resize(6);
-  crop_box_ << 0, 2, -1, 1, 0.1, 1;
-  up_vector_ << 0, 0, 1;
-  up_vector_thresh_ = DEG2RAD(5);
-  inlier_thresh_ = 0.02;
-  min_cluster_size_ = 100;
-  cluster_tolerance_ = 0.04;
+  float cb_arr[] = {0.0, 2.0, -1.0, 1.0, 0.1, 1.0};
+  std::vector<float> crop_box_default(cb_arr, cb_arr + sizeof(cb_arr) / sizeof(float));
 
-  inlier_ptr_.reset(new pcl::PointIndices());
+  float uv_arr[] = {0.0, 0.0, 1.0};
+  std::vector<float> up_vector_default(uv_arr, uv_arr + sizeof(uv_arr) / sizeof(float));
+
+  nh_private_.param("voxel_grid_size", voxel_grid_size_, 0.02f);
+  nh_private_.param("crop_box", crop_box_, crop_box_default);
+  nh_private_.param("up_vector", up_vector_, up_vector_default);
+  nh_private_.param("up_vector_thresh", up_vector_thresh_, 0.087f);
+  nh_private_.param("inlier_thresh", inlier_thresh_, 0.02f);
+  nh_private_.param("min_cluster_size", min_cluster_size_, 100);
+  nh_private_.param("cluster_tolerance", cluster_tolerance_, 0.04f);
+
   cloud_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_filtered_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_bounds_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
+  inlier_ptr_.reset(new pcl::PointIndices());
 
   rviz_visualizer_ptr_.reset(new rviz_visualizer::RvizVisualizer(
     "odom_combined", "markers", nh_private_));
@@ -37,8 +41,15 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 
 void TableDetection::run(const std::string& topic)
 {
-  ROS_INFO("[%s::%s]: Subscribe to topic '%s'", ns().c_str(), name().c_str(), topic.c_str());
-  sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(topic, 1, &TableDetection::cloudCallback, this);
+  if (topic.empty())
+  {
+    ROS_ERROR("[%s]: Invalid topic: '%s'.", name().c_str(), topic.c_str());
+    return;
+  }
+
+  ROS_INFO("[%s]: Subscribe to topic '%s'.", name().c_str(), topic.c_str());
+  sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(
+    topic, 1, &TableDetection::cloudCallback, this);
 }
 
 void TableDetection::stop()
@@ -48,11 +59,13 @@ void TableDetection::stop()
 
 void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 {
-	ROS_INFO("Detect...");
+  if (cloud_msg.data.size() == 0)
+  {
+    ROS_WARN("[%s]: Point cloud is empty.", name().c_str());
+    return;
+  }
 
   pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
-
-  ROS_ERROR("cloud_ptr_ %d", cloud_ptr_->empty());
   
   cloud_filtered_ptr_->header = cloud_ptr_->header;
   *cloud_filtered_ptr_ += *cloud_ptr_;
@@ -62,35 +75,28 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 
   downsample();
   cropBox();
-
   estimatePlaneCoeffs();
   extractCluster();
   projectPointCloudToModel();
   computeConvexHull();
   computeBounds();
 
-	
-
   publish();
 }
 
 void TableDetection::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
 {
-  ROS_INFO("[%s::%s]: Recived point cloud with frame id '%s'.", ns().c_str(), name().c_str(),
+  ROS_INFO("[%s]: Recived point cloud with frame id '%s'.", name().c_str(),
     cloud_msg_ptr->header.frame_id.c_str());
 
-	ROS_INFO("Callback...");
-
   sensor_msgs::PointCloud2 cloud_msg;
-  transform(cloud_msg_ptr, cloud_msg);
-  detect(cloud_msg);
+  if (transform(cloud_msg_ptr, cloud_msg))
+    detect(cloud_msg);
 }
 
 bool TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
   sensor_msgs::PointCloud2& cloud_msg)
 {
-  ROS_INFO("Transform...");
-
   try
   {
     geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
@@ -99,7 +105,7 @@ bool TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_m
   }
   catch (tf2::TransformException &ex)
   {
-    ROS_WARN("%s", ex.what());
+    ROS_WARN("[%s]: %s", name().c_str(), ex.what());
     return false;
   }
 
@@ -108,27 +114,28 @@ bool TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_m
 
 void TableDetection::downsample()
 {
-  ROS_ERROR("cloud_filtered %d", cloud_filtered_ptr_->empty());
   if (cloud_filtered_ptr_->empty())
     return;
-
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZRGB>);
 
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
   vg.setInputCloud(cloud_filtered_ptr_);
   vg.setLeafSize(voxel_grid_size_, voxel_grid_size_, voxel_grid_size_);
-  vg.filter(*tmp);
 
-  ROS_ERROR("downsample tmp %d", tmp->empty());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp_ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
+  vg.filter(*tmp_ptr);
 
-  pcl::copyPointCloud(*tmp, *cloud_filtered_ptr_);
+  if (tmp_ptr->size() < min_cluster_size_)
+  {
+    ROS_WARN("[%s]: Point cloud too small after downsampling. Size: %lu",
+      name().c_str(), tmp_ptr->size());
+    return;
+  }
 
-  ROS_ERROR("downsample cloud_filtered %d", cloud_filtered_ptr_->empty());
+  cloud_filtered_ptr_ = tmp_ptr;
 }
 
 void TableDetection::cropBox()
 {
-  ROS_ERROR("cloud_filtered %d", cloud_filtered_ptr_->empty());
   if (cloud_filtered_ptr_->empty())
     return;
 
@@ -136,10 +143,19 @@ void TableDetection::cropBox()
   cb.setInputCloud(cloud_filtered_ptr_);
   cb.setMin(Eigen::Vector4f(crop_box_[0], crop_box_[2], crop_box_[4], 0));
   cb.setMax(Eigen::Vector4f(crop_box_[1], crop_box_[3], crop_box_[5], 0));
-  cb.filter(inlier_ptr_->indices);
 
-  ROS_WARN("frame: %s", cloud_filtered_ptr_->header.frame_id.c_str());
-  ROS_WARN("frame: %d", inlier_ptr_->indices.empty());
+  pcl::PointIndices::Ptr tmp_ptr(new pcl::PointIndices());
+  cb.filter(tmp_ptr->indices);
+
+  if (tmp_ptr->indices.size() < min_cluster_size_)
+  {
+    ROS_WARN("[%s]: Point cloud too small after cropping. Size: %lu",
+      name().c_str(), tmp_ptr->indices.size());
+    return;
+  }
+
+  inlier_ptr_ = tmp_ptr;
+  inlier_ptr_->header = cloud_filtered_ptr_->header;
 }
 
 void TableDetection::estimatePlaneCoeffs()
@@ -153,7 +169,7 @@ void TableDetection::estimatePlaneCoeffs()
   sac.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
   sac.setMethodType(pcl::SAC_RANSAC);
   sac.setDistanceThreshold(inlier_thresh_);
-  sac.setAxis(up_vector_);
+  sac.setAxis(Eigen::Vector3f(up_vector_.at(1), up_vector_.at(1), up_vector_.at(2)));
   sac.setEpsAngle(up_vector_thresh_);
   sac.segment(*inlier_ptr_, model_coeffs_);
 }
@@ -209,7 +225,6 @@ void TableDetection::computeConvexHull()
 
 void TableDetection::computeBounds()
 {
-  ROS_ERROR("inlier %d, cloud_filtered %d", inlier_ptr_->indices.empty(), cloud_filtered_ptr_->empty());
 	if (inlier_ptr_->indices.empty() || cloud_filtered_ptr_->empty())
     return;
 
@@ -228,9 +243,8 @@ void TableDetection::computeBounds()
 
 void TableDetection::publish()
 {
- ROS_WARN("Publish..."); 
- //if (cloud_bounds_ptr_->empty())
-   // return;
+ if (cloud_bounds_ptr_->empty())
+  return;
   
   // Publish collision object.
   scene_mgr_.addBoxCollisionObject(table_.frame_id, "table", table_.pose, table_.dimensions);
@@ -250,7 +264,7 @@ void TableDetection::publish()
 
   rviz_visualizer_ptr_->publish();
 
-  ROS_INFO("[%s::%s]: Published table with frame id '%s'.", ns().c_str(), name().c_str(),
+  ROS_INFO("[%s]: Published table with frame id '%s'.", name().c_str(),
     table_.frame_id.c_str());
 }
 

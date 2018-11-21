@@ -59,24 +59,25 @@ private:
 
   void publish();
 
-  std::string ns() { return "table_detection"; };
+  std::string nameSpace() { return "table_detection"; };
 
-  std::string name() { return "TableDetection"; };
+  std::string className() { return "TableDetection"; };
 
+  std::string name() { return nameSpace() + "::" + className(); };
 
   float voxel_grid_size_;
-  Eigen::VectorXf crop_box_;
-  Eigen::Vector3f up_vector_;
+  std::vector<float> crop_box_;
+  std::vector<float> up_vector_;
   float up_vector_thresh_;
   float inlier_thresh_;
-  size_t min_cluster_size_;
+  int min_cluster_size_;
   float cluster_tolerance_;
 
-  pcl::PointIndices::Ptr inlier_ptr_;
-  pcl::ModelCoefficients model_coeffs_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_bounds_ptr_;
+  pcl::PointIndices::Ptr inlier_ptr_;
+  pcl::ModelCoefficients model_coeffs_;
   Table table_;
 
   ros::NodeHandle nh_public_, nh_private_;

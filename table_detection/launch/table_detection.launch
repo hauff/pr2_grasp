@@ -5,6 +5,7 @@
 
   <node name="table_detection" pkg="table_detection" type="table_detection_node" output="screen">
     <rosparam param="topic_in" subst_value="True">$(arg topic_in)</rosparam>
+    <rosparam command="load" file="$(find table_detection)/config/default.yaml"/>
   </node>
 
 </launch>
