@@ -8,22 +8,18 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   geometry_msgs
   pcl_conversions
-  #visualization_msgs
-  #eigen_conversions
-  #moveit_msgs
   planning_scene_manager
   rviz_visualizer
 )
 
 find_package(PCL 1.7 REQUIRED)
-#link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES table_detection
   CATKIN_DEPENDS roscpp planning_scene_manager rviz_visualizer
-  # DEPENDS
+# DEPENDS
 )
 
 include_directories(

@@ -83,7 +83,8 @@ private:
   pcl::ModelCoefficients model_coeffs_;
   Table table_;
 
-  ros::NodeHandle nh_public_, nh_private_;
+  ros::NodeHandle nh_public_;
+  ros::NodeHandle nh_private_;
   ros::Subscriber sub_cloud_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;

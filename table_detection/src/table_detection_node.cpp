@@ -17,7 +17,6 @@ int main(int argc, char **argv)
 
   table_detection::TableDetection table_detection;
   table_detection.run(topic_in);
-
   ros::spin();
 
   return EXIT_SUCCESS;
