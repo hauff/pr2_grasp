@@ -13,9 +13,10 @@ catkin_make
 source devel/setup.bash
 ```
 
-2. Only needed if your PCL version doesn't match the one shipped with ROS.
-    Clone [pcl_conversion](https://github.com/ros-perception/pcl_conversions) and
-    [perception_pcl](https://github.com/ros-perception/perception_pcl.git).
+2. Clone [pcl_conversion](https://github.com/ros-perception/pcl_conversions) and
+    [perception_pcl](https://github.com/ros-perception/perception_pcl.git).  
+    (only needed if your PCL version doesn't match the one shipped with ROS)
+    
 ```
 git clone -b indigo-devel https://github.com/ros-perception/pcl_conversions.git
 git clone -b indigo-devel https://github.com/ros-perception/perception_pcl.git
