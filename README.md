@@ -27,3 +27,7 @@ An experimental playground.
     ```
     git clone https://github.com/hauff/pr2_grasp.git -b indigo-devel
     ```
+
+## Run
+
+TODO: Fill this chapter.
