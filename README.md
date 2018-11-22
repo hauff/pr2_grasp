@@ -17,8 +17,13 @@ An experimental playground.
 [perception_pcl](https://github.com/ros-perception/perception_pcl.git).
 (only needed if your PCL version doesn't match the one shipped with ROS)
     ```
-    git clone -b indigo-devel https://github.com/ros-perception/pcl_conversions.git
-    git clone -b indigo-devel https://github.com/ros-perception/perception_pcl.git
+    git clone https://github.com/ros-perception/pcl_conversions.git -b indigo-devel
+    git clone https://github.com/ros-perception/perception_pcl.git -b indigo-devel
     ```
 
 3. Install [Grasp Pose Detection (GPD)](https://github.com/atenpas/gpd).
+
+4. Clone this repository.
+    ```
+    git clone https://github.com/hauff/pr2_grasp.git -b indigo-devel
+    ```
