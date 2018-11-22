@@ -21,35 +21,33 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
   float uv_arr[] = {0.0, 0.0, 1.0};
   std::vector<float> up_vector_default(uv_arr, uv_arr + sizeof(uv_arr) / sizeof(float));
 
-  nh_private_.param("voxel_grid_size", voxel_grid_size_, 0.02f);
-  nh_private_.param("crop_box", crop_box_, crop_box_default);
-  nh_private_.param("up_vector", up_vector_, up_vector_default);
-  nh_private_.param("up_vector_thresh", up_vector_thresh_, 0.087f);
-  nh_private_.param("inlier_thresh", inlier_thresh_, 0.02f);
-  nh_private_.param("min_cluster_size", min_cluster_size_, 100);
-  nh_private_.param("cluster_tolerance", cluster_tolerance_, 0.04f);
+  nh_private_.param<std::string>("frame_id", frame_id_, "odom_combined");
+  nh_private_.param<bool>("detect_continuous", detect_continuous_, false);
+  nh_private_.param<float>("voxel_grid_size", voxel_grid_size_, 0.02);
+  nh_private_.param<std::vector<float> >("crop_box", crop_box_, crop_box_default);
+  nh_private_.param<std::vector<float> >("up_vector", up_vector_, up_vector_default);
+  nh_private_.param<float>("up_vector_thresh", up_vector_thresh_, 0.087);
+  nh_private_.param<float>("inlier_thresh", inlier_thresh_, 0.02);
+  nh_private_.param<int>("min_cluster_size", min_cluster_size_, 100);
+  nh_private_.param<float>("cluster_tolerance", cluster_tolerance_, 0.04);
 
   cloud_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_filtered_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   cloud_bounds_ptr_.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
   inlier_ptr_.reset(new pcl::PointIndices());
 
-  rviz_visualizer_ptr_.reset(new rviz_visualizer::RvizVisualizer(
-    "odom_combined", "markers", nh_private_));
+  rviz_visualizer_ptr_.reset(new rviz_visualizer::RvizVisualizer(frame_id_, "markers", nh_private_));
   rviz_visualizer_ptr_->setAlpha(0.5);
 }
 
 void TableDetection::run(const std::string& topic)
 {
-  if (topic.empty())
-  {
-    ROS_ERROR("[%s]: Invalid topic: '%s'.", name().c_str(), topic.c_str());
-    return;
-  }
-
   ROS_INFO("[%s]: Subscribe to topic '%s'.", name().c_str(), topic.c_str());
   sub_cloud_ = nh_public_.subscribe<sensor_msgs::PointCloud2>(
     topic, 1, &TableDetection::cloudCallback, this);
+
+  if (sub_cloud_.getNumPublishers() == 0)
+    ROS_WARN("[%s]: No publishers for topic '%s' detected.", name().c_str(), topic.c_str());
 }
 
 void TableDetection::stop()
@@ -59,17 +57,22 @@ void TableDetection::stop()
 
 void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 {
-  if (cloud_msg.data.size() == 0)
+  pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
+
+  if (cloud_ptr_->empty())
   {
     ROS_WARN("[%s]: Point cloud is empty.", name().c_str());
     return;
   }
+  
+  if (detect_continuous_)
+  {
+    *cloud_filtered_ptr_ += *cloud_ptr_;
+    cloud_filtered_ptr_->header = cloud_ptr_->header;
+  }
+  else
+    pcl::copyPointCloud(*cloud_ptr_, *cloud_filtered_ptr_);
 
-  pcl::fromROSMsg(cloud_msg, *cloud_ptr_);
-  
-  cloud_filtered_ptr_->header = cloud_ptr_->header;
-  *cloud_filtered_ptr_ += *cloud_ptr_;
-  
   cloud_bounds_ptr_->clear();
   inlier_ptr_->indices.clear();
 
@@ -86,8 +89,8 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 
 void TableDetection::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
 {
-  ROS_INFO("[%s]: Recived point cloud with frame id '%s'.", name().c_str(),
-    cloud_msg_ptr->header.frame_id.c_str());
+  ROS_INFO("[%s]: Recived point cloud with %lu points and frame id '%s'.",
+    name().c_str(), cloud_msg_ptr->data.size(), cloud_msg_ptr->header.frame_id.c_str());
 
   sensor_msgs::PointCloud2 cloud_msg;
   if (transform(cloud_msg_ptr, cloud_msg))
@@ -100,7 +103,7 @@ bool TableDetection::transform(const sensor_msgs::PointCloud2::ConstPtr& cloud_m
   try
   {
     geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
-      "odom_combined", cloud_msg_ptr->header.frame_id, cloud_msg_ptr->header.stamp);
+      frame_id_, cloud_msg_ptr->header.frame_id, cloud_msg_ptr->header.stamp);
     tf2::doTransform(*cloud_msg_ptr, cloud_msg, transform);
   }
   catch (tf2::TransformException &ex)
@@ -117,21 +120,15 @@ void TableDetection::downsample()
   if (cloud_filtered_ptr_->empty())
     return;
 
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp_ptr(cloud_filtered_ptr_);
+
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
   vg.setInputCloud(cloud_filtered_ptr_);
   vg.setLeafSize(voxel_grid_size_, voxel_grid_size_, voxel_grid_size_);
+  vg.filter(*cloud_filtered_ptr_);
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp_ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
-  vg.filter(*tmp_ptr);
-
-  if (tmp_ptr->size() < min_cluster_size_)
-  {
-    ROS_WARN("[%s]: Point cloud too small after downsampling. Size: %lu",
-      name().c_str(), tmp_ptr->size());
-    return;
-  }
-
-  cloud_filtered_ptr_ = tmp_ptr;
+  if (cloud_filtered_ptr_->empty())
+    ROS_WARN("[%s]: Point cloud is empty after downsample.", name().c_str());
 }
 
 void TableDetection::cropBox()
@@ -143,24 +140,18 @@ void TableDetection::cropBox()
   cb.setInputCloud(cloud_filtered_ptr_);
   cb.setMin(Eigen::Vector4f(crop_box_[0], crop_box_[2], crop_box_[4], 0));
   cb.setMax(Eigen::Vector4f(crop_box_[1], crop_box_[3], crop_box_[5], 0));
+  cb.filter(inlier_ptr_->indices);
 
-  pcl::PointIndices::Ptr tmp_ptr(new pcl::PointIndices());
-  cb.filter(tmp_ptr->indices);
+  // TODO: Check header !
+  //inlier_ptr_->header = cloud_filtered_ptr_->header;
 
-  if (tmp_ptr->indices.size() < min_cluster_size_)
-  {
-    ROS_WARN("[%s]: Point cloud too small after cropping. Size: %lu",
-      name().c_str(), tmp_ptr->indices.size());
-    return;
-  }
-
-  inlier_ptr_ = tmp_ptr;
-  inlier_ptr_->header = cloud_filtered_ptr_->header;
+  if (inlier_ptr_->indices.empty())
+    ROS_WARN("[%s]: Point cloud is empty after crop.", name().c_str());
 }
 
 void TableDetection::estimatePlaneCoeffs()
 {
-  if (inlier_ptr_->indices.empty() || cloud_filtered_ptr_->empty())
+  if (cloud_filtered_ptr_->empty() || inlier_ptr_->indices.empty())
     return;
 
   pcl::SACSegmentation<pcl::PointXYZRGB> sac;
@@ -172,11 +163,14 @@ void TableDetection::estimatePlaneCoeffs()
   sac.setAxis(Eigen::Vector3f(up_vector_.at(1), up_vector_.at(1), up_vector_.at(2)));
   sac.setEpsAngle(up_vector_thresh_);
   sac.segment(*inlier_ptr_, model_coeffs_);
+
+  if (inlier_ptr_->indices.empty())
+    ROS_WARN("[%s]: Point cloud is empty after segmentation.", name().c_str());
 }
 
 void TableDetection::extractCluster()
 {
-  if (inlier_ptr_->indices.empty() || cloud_filtered_ptr_->empty())
+  if (cloud_filtered_ptr_->empty() || inlier_ptr_->indices.empty())
     return;
 
   pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ece;
@@ -194,11 +188,14 @@ void TableDetection::extractCluster()
     inlier_ptr_->indices.insert(inlier_ptr_->indices.end(), clusters[i].indices.begin(),
       clusters[i].indices.end());
   }
+
+  if (inlier_ptr_->indices.empty())
+    ROS_WARN("[%s]: Point cloud is empty after cluster extraction.", name().c_str());
 }
 
 void TableDetection::projectPointCloudToModel()
 {
-  if (inlier_ptr_->indices.empty() || cloud_filtered_ptr_->empty())
+  if (cloud_filtered_ptr_->empty() || inlier_ptr_->indices.empty())
     return;
 
   pcl::ProjectInliers<pcl::PointXYZRGB> pi;
@@ -207,6 +204,9 @@ void TableDetection::projectPointCloudToModel()
   pi.setModelType(pcl::SACMODEL_PLANE);
   pi.setModelCoefficients(boost::make_shared<pcl::ModelCoefficients>(model_coeffs_));
   pi.filter(*cloud_bounds_ptr_);
+
+  if (cloud_bounds_ptr_->empty())
+    ROS_WARN("[%s]: Point cloud is empty after projection.", name().c_str());
 }
 
 void TableDetection::computeConvexHull()
@@ -214,18 +214,19 @@ void TableDetection::computeConvexHull()
   if (cloud_bounds_ptr_->empty())
     return;
 
-  pcl::PointCloud<pcl::PointXYZRGB> tmp;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp_ptr(cloud_bounds_ptr_);
 
   pcl::ConvexHull<pcl::PointXYZRGB> ch;
-  ch.setInputCloud(cloud_bounds_ptr_);
-  ch.reconstruct(tmp);
+  ch.setInputCloud(tmp_ptr);
+  ch.reconstruct(*cloud_bounds_ptr_);
 
-  pcl::copyPointCloud(tmp, *cloud_bounds_ptr_);
+  if (cloud_bounds_ptr_->empty())
+    ROS_WARN("[%s]: Point cloud is empty after convex hull.", name().c_str());
 }
 
 void TableDetection::computeBounds()
 {
-	if (inlier_ptr_->indices.empty() || cloud_filtered_ptr_->empty())
+	if (cloud_filtered_ptr_->empty() || inlier_ptr_->indices.empty())
     return;
 
   Eigen::Vector4f min, max;
@@ -243,7 +244,7 @@ void TableDetection::computeBounds()
 
 void TableDetection::publish()
 {
- if (cloud_bounds_ptr_->empty())
+ if (cloud_filtered_ptr_->empty() || inlier_ptr_->indices.empty() || cloud_bounds_ptr_->empty())
   return;
   
   // Publish collision object.

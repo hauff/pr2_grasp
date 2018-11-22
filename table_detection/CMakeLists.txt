@@ -7,16 +7,16 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_sensor_msgs
   sensor_msgs
   geometry_msgs
-  visualization_msgs
   pcl_conversions
-  eigen_conversions
-  moveit_msgs
+  #visualization_msgs
+  #eigen_conversions
+  #moveit_msgs
   planning_scene_manager
   rviz_visualizer
 )
 
 find_package(PCL 1.7 REQUIRED)
-#set(PCL_INCLUDE_DIRS /usr/local/include/pcl-1.8)
+#link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(

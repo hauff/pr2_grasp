@@ -1,3 +1,5 @@
+frame_id: odom_combined
+detect_continuous: true
 crop_box: [0.0, 2.0, -1.0, 1.0, 0.1, 1.0]
 up_vector: [0.0, 0.0, 1.0]
 up_vector_thresh: 0.087

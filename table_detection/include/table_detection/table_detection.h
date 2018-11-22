@@ -65,6 +65,9 @@ private:
 
   std::string name() { return nameSpace() + "::" + className(); };
 
+
+  std::string frame_id_;
+  bool detect_continuous_;
   float voxel_grid_size_;
   std::vector<float> crop_box_;
   std::vector<float> up_vector_;

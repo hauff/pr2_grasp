@@ -2,6 +2,28 @@
 
 An experimental playground.
 
+## Compile
+
+1. Create catkin workspace.
+```
+mkdir -p ~/catkin_ws/src
+cd ~/catkin_ws/
+catkin_make
+
+source devel/setup.bash
+```
+
+2. Only needed if your PCL version doesn't match the one shipped with ROS.
+    Clone [pcl_conversion](https://github.com/ros-perception/pcl_conversions) and
+    [perception_pcl](https://github.com/ros-perception/perception_pcl.git).
+```
+git clone -b indigo-devel https://github.com/ros-perception/pcl_conversions.git
+git clone -b indigo-devel https://github.com/ros-perception/perception_pcl.git
+```
+
+3. Install [Grasp Pose Detection (GPD)](https://github.com/atenpas/gpd).
+
+
 ```
 roslaunch pr2_gazebo pr2_empty_world.launch
 roslaunch pr2_teleop_general pr2_teleop_general_keyboard.launch

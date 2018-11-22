@@ -22,8 +22,9 @@ find_package(catkin REQUIRED COMPONENTS
   gpd
 )
 
-find_package(PCL 1.7 REQUIRED)
-add_definitions(${PCL_DEFINITIONS})
+#find_package(PCL REQUIRED)
+#link_directories(${PCL_LIBRARY_DIRS})
+#add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
 # INCLUDE_DIRS include
