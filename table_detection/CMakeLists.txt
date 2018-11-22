@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   rviz_visualizer
 )
 
-find_package(PCL 1.7 REQUIRED)
+find_package(PCL REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
@@ -32,4 +32,4 @@ add_library(table_detection src/table_detection.cpp)
 target_link_libraries(table_detection ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(table_detection_node src/table_detection_node.cpp)
-target_link_libraries(table_detection_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} table_detection)
+target_link_libraries(table_detection_node ${catkin_LIBRARIES} table_detection)
