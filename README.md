@@ -35,4 +35,4 @@ TODO: Fill this section.
 ## Troubleshooting
 
 * Compiler error "Undefined reference to 'pcl::search::KdTree<pcl::PointXYZRGB>::KdTree(bool)'".  
-    Your PCL version doesn't match the one shipped with ROS. See [step 2](#Compilation).
+    Your PCL version doesn't match the one shipped with ROS. See [step 2](#Compile).
