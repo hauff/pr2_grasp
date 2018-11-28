@@ -56,8 +56,7 @@ TODO: Fill this section.
     ```
     void CloudCamera::calculateNormalsOrganized()
     {
-      ...
-
+      ...      
       //normals_ = cloud_normals->getMatrixXfMap().cast<double>();
       Eigen::Matrix3Xf float_points = cloud_normals->getMatrixXfMap();
       normals_ = float_points.cast<double>();
