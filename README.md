@@ -51,7 +51,7 @@ TODO: Fill this section.
   Your PCL version doesn't match the one shipped with ROS.  
   Solution: [Step 2](#Compile).
   
-* **Runtime error "Invalid sizes when resizing a matrix or array."**  
+* **Runtime error "Invalid sizes when resizing a matrix or array"**  
   Solution: Modify "cloud_camera.cpp" in [Grasp Pose Generator (GPG)](https://github.com/atenpas/gpg).
     ```
     void CloudCamera::calculateNormalsOrganized()
