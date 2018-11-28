@@ -25,7 +25,7 @@ An experimental playground.
 
 3. Clone [pcl_conversion](https://github.com/ros-perception/pcl_conversions) and
 [perception_pcl](https://github.com/ros-perception/perception_pcl.git).
-(only needed if your PCL version doesn't match the one shipped with ROS)
+(Only needed if your PCL version doesn't match the one shipped with ROS)
     ```
     git clone https://github.com/ros-perception/pcl_conversions.git -b indigo-devel
     git clone https://github.com/ros-perception/perception_pcl.git -b indigo-devel
