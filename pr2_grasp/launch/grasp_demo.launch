@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+  <arg name="topic_in"/>
+
+  <node name="grasp_demo" pkg="pr2_grasp" type="grasp_demo_node" output="screen">
+    <!--<rosparam param="topic_in" subst_value="True">$(arg topic_in)</rosparam>-->
+    <param name="lenet_params_dir" value="$(find gpd)/lenet/15channels/params/"/>
+    <rosparam command="load" file="$(find pr2_grasp)/config/gpd_default.yaml"/>
+  </node>
+
+</launch>
