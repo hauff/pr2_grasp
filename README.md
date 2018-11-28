@@ -47,12 +47,12 @@ TODO: Fill this section.
 
 ## Troubleshooting
 
-* **Compiler error "Undefined reference to 'pcl::search::KdTree<pcl::PointXYZRGB>::KdTree(bool)'"**  
+* **Compiler error "Undefined reference to pcl::search::KdTree<pcl::PointXYZRGB>::KdTree(bool)"**  
   Your PCL version doesn't match the one shipped with ROS.  
-  **Solution:** [Step 2](#Compile).
+  Solution: [Step 2](#Compile).
   
 * **Runtime error "Invalid sizes when resizing a matrix or array."**  
-  **Solution:** Modify "cloud_camera.cpp" in [Grasp Pose Generator (GPG)](https://github.com/atenpas/gpg).
+  Solution: Modify "cloud_camera.cpp" in [Grasp Pose Generator (GPG)](https://github.com/atenpas/gpg).
     ```
     void CloudCamera::calculateNormalsOrganized()
     {
