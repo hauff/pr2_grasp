@@ -6,6 +6,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   moveit_msgs
+  geometry_msgs
+  shape_msgs
   eigen_conversions
 )
 
@@ -15,7 +17,7 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES planning_scene_manager
   CATKIN_DEPENDS roscpp
-# DEPENDS
+  DEPENDS Eigen
 )
 
 include_directories(

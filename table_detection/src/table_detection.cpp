@@ -38,6 +38,8 @@ TableDetection::TableDetection() : nh_private_("~"), tf_listener_(tf_buffer_)
 
   rviz_visualizer_ptr_.reset(new rviz_visualizer::RvizVisualizer(frame_id_, "markers", nh_private_));
   rviz_visualizer_ptr_->setAlpha(0.5);
+
+  //pub_cloud_ = nh_public_.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("debug", 10);
 }
 
 void TableDetection::run(const std::string& topic)
@@ -64,17 +66,15 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
     ROS_WARN("[%s]: Point cloud is empty.", name().c_str());
     return;
   }
-  
-  if (detect_continuous_)
-  {
-    *cloud_filtered_ptr_ += *cloud_ptr_;
-    cloud_filtered_ptr_->header = cloud_ptr_->header;
-  }
-  else
-    pcl::copyPointCloud(*cloud_ptr_, *cloud_filtered_ptr_);
+
+  inlier_ptr_->indices.clear();
+  inlier_ptr_->header = cloud_ptr_->header;
 
   cloud_bounds_ptr_->clear();
-  inlier_ptr_->indices.clear();
+  cloud_bounds_ptr_->header = cloud_ptr_->header;
+
+  pcl::copyPointCloud(*cloud_ptr_, *cloud_filtered_ptr_);
+  cloud_filtered_ptr_->header = cloud_ptr_->header;
 
   downsample();
   cropBox();
@@ -89,8 +89,8 @@ void TableDetection::detect(const sensor_msgs::PointCloud2& cloud_msg)
 
 void TableDetection::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
 {
-  ROS_INFO("[%s]: Recived point cloud with %lu points and frame id '%s'.",
-    name().c_str(), cloud_msg_ptr->data.size(), cloud_msg_ptr->header.frame_id.c_str());
+  ROS_INFO("[%s]: Recived point cloud with frame id '%s'.",
+    name().c_str(), cloud_msg_ptr->header.frame_id.c_str());
 
   sensor_msgs::PointCloud2 cloud_msg;
   if (transform(cloud_msg_ptr, cloud_msg))
@@ -120,8 +120,6 @@ void TableDetection::downsample()
   if (cloud_filtered_ptr_->empty())
     return;
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp_ptr(cloud_filtered_ptr_);
-
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
   vg.setInputCloud(cloud_filtered_ptr_);
   vg.setLeafSize(voxel_grid_size_, voxel_grid_size_, voxel_grid_size_);
@@ -142,9 +140,6 @@ void TableDetection::cropBox()
   cb.setMax(Eigen::Vector4f(crop_box_[1], crop_box_[3], crop_box_[5], 0));
   cb.filter(inlier_ptr_->indices);
 
-  // TODO: Check header !
-  //inlier_ptr_->header = cloud_filtered_ptr_->header;
-
   if (inlier_ptr_->indices.empty())
     ROS_WARN("[%s]: Point cloud is empty after crop.", name().c_str());
 }
@@ -159,8 +154,9 @@ void TableDetection::estimatePlaneCoeffs()
   sac.setIndices(inlier_ptr_);
   sac.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
   sac.setMethodType(pcl::SAC_RANSAC);
+  sac.setOptimizeCoefficients(false);
   sac.setDistanceThreshold(inlier_thresh_);
-  sac.setAxis(Eigen::Vector3f(up_vector_.at(1), up_vector_.at(1), up_vector_.at(2)));
+  sac.setAxis(Eigen::Vector3f(up_vector_.at(0), up_vector_.at(1), up_vector_.at(2)));
   sac.setEpsAngle(up_vector_thresh_);
   sac.segment(*inlier_ptr_, model_coeffs_);
 
@@ -239,13 +235,17 @@ void TableDetection::computeBounds()
 
   //table_.dimensions.x() += 0.02;
   //table_.dimensions.y() += 1.5;
-  table_.dimensions.z() = 0.005;
+  //table_.dimensions.z() = 0.005;
 }
 
 void TableDetection::publish()
 {
  if (cloud_filtered_ptr_->empty() || inlier_ptr_->indices.empty() || cloud_bounds_ptr_->empty())
   return;
+
+  //pcl::PointCloud<pcl::PointXYZRGB> tmp;
+  //pcl::copyPointCloud(*cloud_filtered_ptr_, *inlier_ptr_, tmp);
+  //pub_cloud_.publish(tmp);
   
   // Publish collision object.
   scene_mgr_.addBoxCollisionObject(table_.frame_id, "table", table_.pose, table_.dimensions);

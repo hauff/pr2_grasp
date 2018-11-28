@@ -4,8 +4,8 @@
 #include <ros/ros.h>
 #include <Eigen/Geometry>
 #include <std_msgs/Header.h>
-#include <shape_msgs/SolidPrimitive.h>
 #include <geometry_msgs/Pose.h>
+#include <shape_msgs/SolidPrimitive.h>
 #include <moveit_msgs/GetPlanningScene.h>
 #include <moveit_msgs/CollisionObject.h>
 #include <moveit_msgs/AllowedCollisionMatrix.h>
