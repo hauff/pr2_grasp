@@ -121,7 +121,7 @@ void TableDetection::downsample()
     return;
 
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
-  vg.setInputCloud(cloud_filtered_ptr_);
+  vg.setInputCloud(cloud_filtered_ptr_->makeShared());
   vg.setLeafSize(voxel_grid_size_, voxel_grid_size_, voxel_grid_size_);
   vg.filter(*cloud_filtered_ptr_);
 
@@ -235,7 +235,7 @@ void TableDetection::computeBounds()
 
   //table_.dimensions.x() += 0.02;
   //table_.dimensions.y() += 1.5;
-  //table_.dimensions.z() = 0.005;
+  table_.dimensions.z() = 0.01;
 }
 
 void TableDetection::publish()
