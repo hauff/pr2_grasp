@@ -4,16 +4,16 @@
 #include <ros/ros.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_eigen/tf2_eigen.h>
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
-#include <pcl/common/transforms.h>
-#include <pcl_conversions/pcl_conversions.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <shape_msgs/SolidPrimitive.h>
 #include <moveit_msgs/CollisionObject.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+#include <pcl/common/transforms.h>
 #include <gpg/cloud_camera.h>
 #include <gpd/grasp_detector.h>
 #include <gpd/grasp_plotter.h>
@@ -147,12 +147,18 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "grasp_demo");
   ros::NodeHandle nh_public, nh_private("~");
 
-  std::string base_frame_id = "odom_combined";
-  std::string topic_cloud_in = "/head_mount_kinect2/depth_registered/points";
+  std::string topic_in, base_frame_id = "odom_combined";
+  nh_private.param<std::string>("topic_in", topic_in, "");
+
+  if (topic_in.empty())
+  {
+    ROS_ERROR("Parameter missing: 'topic_in'");
+    return EXIT_FAILURE;
+  }
 
   pcl::PointCloud<pcl::PointXYZRGB> cloud;
   ros::Subscriber sub_cloud = nh_public.subscribe<sensor_msgs::PointCloud2>(
-    topic_cloud_in, 1, boost::bind(callback_cloud, _1, boost::ref(cloud)));
+    topic_in, 1, boost::bind(callback_cloud, _1, boost::ref(cloud)));
 
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener(tf_buffer);
@@ -160,12 +166,9 @@ int main(int argc, char **argv)
   planning_scene_manager::PlanningSceneManager scene_mgr;
   move_group_manager::MoveGroupManager group_mgr;
 
-  moveit_msgs::CollisionObject table;
-  if (!scene_mgr.getCollisionObject("table", table))
-    return EXIT_FAILURE;
-
-  moveit_msgs::CollisionObject placing_bin;
-  if (!scene_mgr.getCollisionObject("placing_bin", placing_bin))
+  moveit_msgs::CollisionObject table, placing_bin;
+  if (!scene_mgr.getCollisionObject("table", table) ||
+      !scene_mgr.getCollisionObject("placing_bin", placing_bin))
     return EXIT_FAILURE;
 
   set_gpd_params(nh_private, table, placing_bin);
