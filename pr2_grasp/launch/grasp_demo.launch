@@ -4,7 +4,7 @@
   <arg name="topic_in"/>
 
   <node name="grasp_demo" pkg="pr2_grasp" type="grasp_demo_node" output="screen">
-    <param param="topic_in" value="$(arg topic_in)"/>
+    <param name="topic_in" value="$(arg topic_in)"/>
     <param name="lenet_params_dir" value="$(find gpd)/lenet/15channels/params/"/>
     <rosparam command="load" file="$(find pr2_grasp)/config/gpd_default.yaml"/>
   </node>
