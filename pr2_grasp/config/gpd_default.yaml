@@ -20,7 +20,7 @@ plot_filtered_grasps: false
 plot_valid_grasps: false
 plot_clusters: false
 plot_selected_grasps: false
-rviz_topic: grasps_rviz
+rviz_topic: "grasps_rviz"
 
 # Preprocessing of point cloud
 voxelize: true
@@ -57,6 +57,6 @@ num_selected: 5
 
 filter_table_side_grasps: true
 table_height: 0.5
-vertical_axis: [0, 0, 1] # Not in use, if you changed GraspDetector::filterSideGraspsCloseToTable(...)
-angle_thresh: 0.785 # Not in use, if you changed GraspDetector::filterSideGraspsCloseToTable(...)
-table_thresh: 0.05 # Not in use, if you changed GraspDetector::filterSideGraspsCloseToTable(...)
+# vertical_axis: [0, 0, 1] # Not in use
+# angle_thresh: 0.785 # Not in use
+# table_thresh: 0.05 # Not in use
