@@ -18,6 +18,16 @@
 #include <gpd/grasp_detector.h>
 #include <gpd/grasp_plotter.h>
 
+// pr2 gripper sensor ------------------------------------------------------------------------------
+/*
+#include <pr2_gripper_sensor_msgs/PR2GripperGrabAction.h>
+#include <pr2_gripper_sensor_msgs/PR2GripperReleaseAction.h>
+#include <actionlib/client/simple_action_client.h>
+typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperGrabAction> GrabClient;
+typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperReleaseAction> ReleaseClient;
+*/
+//--------------------------------------------------------------------------------------------------
+
 void set_gpd_params(ros::NodeHandle& nh, const moveit_msgs::CollisionObject& table,
   const moveit_msgs::CollisionObject& placing_bin)
 {
@@ -112,12 +122,15 @@ bool grasp(planning_scene_manager::PlanningSceneManager scene_mgr,
     scene_mgr.addSphereCollisionObject("odom_combined", "object", object_pose, 0.10);
     scene_mgr.allowCollision("object");
 
-    if (group_mgr.pick(grasp_pose_msg, approach_msg) == 1)
+    if (group_mgr.pickGently(grasp_pose_msg, approach_msg))
+    {
       return true;
-
-    group_mgr.openGripper();
-    scene_mgr.removeCollisionObject("r_wist_roll_link", "object");
-    scene_mgr.removeCollisionObject("odom_combined", "object");
+    }
+    else
+    {
+      scene_mgr.removeCollisionObject("r_wist_roll_link", "object");
+      scene_mgr.removeCollisionObject("odom_combined", "object");
+    }
   }
 
   ROS_WARN("Tried all grasps without success.");
@@ -135,9 +148,13 @@ void place(planning_scene_manager::PlanningSceneManager scene_mgr,
 
   moveit::planning_interface::MoveGroup::Plan plan;
   if (group_mgr.plan("odom_combined", "r_wrist_roll_link", place_pose_msg, plan))
+  {
     group_mgr.execute(plan);
+  }
+  else
+    ROS_WARN("Place object failed.");
 
-  group_mgr.openGripper();
+  //group_mgr.openGripper();
   scene_mgr.removeCollisionObject("r_wist_roll_link", "object");
   scene_mgr.removeCollisionObject("odom_combined", "object");
 }
@@ -171,12 +188,40 @@ int main(int argc, char **argv)
       !scene_mgr.getCollisionObject("placing_bin", placing_bin))
     return EXIT_FAILURE;
 
+  geometry_msgs::Pose place_pose_msg;
+  place_pose_msg.position.x = placing_bin.primitive_poses.at(0).position.x - 0.2;
+  place_pose_msg.position.y = placing_bin.primitive_poses.at(0).position.y;
+  place_pose_msg.position.z = placing_bin.primitive_poses.at(0).position.z + 0.4;
+  place_pose_msg.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0.25 * M_PI, 0);
+
+  //scene_mgr.allowCollision("table");
+
   set_gpd_params(nh_private, table, placing_bin);
 
   GraspDetector grasp_detector(nh_private);
   GraspPlotter grasp_plotter(nh_private, grasp_detector.getHandSearchParameters());
 
-  ros::Duration(1.0).sleep();
+  // pr2 gripper sensor ----------------------------------------------------------------------------
+  /*
+  GrabClient grab_client("r_gripper_sensor_controller/grab", true);
+  while(!grab_client.waitForServer(ros::Duration(5.0)))
+    ROS_INFO("Waiting for the r_gripper_sensor_controller/grab action server to come up.");
+
+  ReleaseClient release_client("r_gripper_sensor_controller/release", true);
+  while(!release_client.waitForServer(ros::Duration(5.0)))
+    ROS_INFO("Waiting for the r_gripper_sensor_controller/release action server to come up.");
+    */
+  //------------------------------------------------------------------------------------------------
+
+  ROS_WARN("Moving to place pose.");
+  moveit::planning_interface::MoveGroup::Plan plan;
+  if (!group_mgr.plan("odom_combined", "r_wrist_roll_link", place_pose_msg, plan) ||
+      !group_mgr.execute(plan) ||
+      !group_mgr.openGripperGently())
+  {
+    ROS_ERROR("Failure while moving to place pose.");
+    return EXIT_FAILURE;
+  }
 
   ros::Rate rate(10);
   while (ros::ok())
@@ -200,17 +245,82 @@ int main(int argc, char **argv)
     ROS_INFO("Detect grasps.");
     std::vector<Grasp> grasps;
     if (!detect_grasps(transform.translation(), cloud, grasp_detector, grasps))
+    {
+      /*
+      ROS_WARN("Moving back to place pose.");
+      moveit::planning_interface::MoveGroup::Plan plan;
+      if (!group_mgr.plan("odom_combined", "r_wrist_roll_link", place_pose_msg, plan) ||
+          !group_mgr.execute(plan))
+        ROS_ERROR("Failure while moving to place pose.");
+      */
       continue;
+    }
 
     ROS_INFO("Publish grasps to Rviz.");
     grasp_plotter.drawGrasps(grasps, base_frame_id);
 
     ROS_INFO("Grasp object.");
     if (!grasp(scene_mgr, group_mgr, grasps))
+    {
+      ROS_WARN("Open gripper.");
+      group_mgr.openGripperGently();
+
+      ROS_WARN("Moving back to place pose.");
+      moveit::planning_interface::MoveGroup::Plan plan;
+      if (!group_mgr.plan("odom_combined", "r_wrist_roll_link", place_pose_msg, plan) ||
+          !group_mgr.execute(plan))
+        ROS_ERROR("Failure while moving to place pose.");
+
       continue;
+    }
+
+    // pr2 gripper sensor --------------------------------------------------------------------------
+    /*
+    pr2_gripper_sensor_msgs::PR2GripperGrabGoal grip;
+    grip.command.hardness_gain = 0.03;
+    ROS_INFO("Sending grab goal.");
+    grab_client.sendGoal(grip);
+    grab_client.waitForResult(ros::Duration(20.0));
+    if (grab_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+    {
+      ROS_INFO("Successfully completed Grab");
+    }
+    else
+    {
+      ROS_INFO("Grab Failed");
+      continue;
+    }
+    */
+    //----------------------------------------------------------------------------------------------
 
     ROS_INFO("Place object.");
-    place(scene_mgr, group_mgr, placing_bin);
+    if (!group_mgr.plan("odom_combined", "r_wrist_roll_link", place_pose_msg, plan) ||
+      !group_mgr.execute(plan) ||
+      !group_mgr.openGripperGently())
+    {
+      ROS_ERROR("Failure while moving to place pose.");
+    }
+    //place(scene_mgr, group_mgr, placing_bin);
+
+    // pr2 gripper sensor --------------------------------------------------------------------------
+    /*
+    pr2_gripper_sensor_msgs::PR2GripperReleaseGoal place;
+    place.command.event.trigger_conditions = place.command.event.FINGER_SIDE_IMPACT_OR_SLIP_OR_ACC;
+    place.command.event.acceleration_trigger_magnitude = 0;
+    place.command.event.slip_trigger_magnitude = 0;
+    ROS_INFO("Waiting for object placement contact...");
+    release_client.sendGoal(place);
+    release_client.waitForResult();
+    if(release_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+    {
+      ROS_INFO("Release Success");
+    }
+    else
+    {
+      ROS_INFO("Place Failure");
+    }
+    */
+    //----------------------------------------------------------------------------------------------
 
     rate.sleep();
   }

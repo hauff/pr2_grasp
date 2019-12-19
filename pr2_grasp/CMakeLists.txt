@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   gpd
   planning_scene_manager
   move_group_manager
+  #pr2_gripper_sensor_action
 )
 
 find_library(GENERATOR_LIB grasp_candidates_generator)

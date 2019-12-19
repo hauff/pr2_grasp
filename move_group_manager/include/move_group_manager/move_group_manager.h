@@ -8,6 +8,13 @@
 #include <geometry_msgs/Pose.h>
 #include <moveit/move_group_interface/move_group.h>
 
+#include <pr2_gripper_sensor_msgs/PR2GripperGrabAction.h>
+#include <pr2_gripper_sensor_msgs/PR2GripperReleaseAction.h>
+#include <actionlib/client/simple_action_client.h>
+
+typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperGrabAction> GrabClient;
+typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperReleaseAction> ReleaseClient;
+
 namespace move_group_manager
 {
 
@@ -30,9 +37,15 @@ public:
 
   int pick(const geometry_msgs::Pose& grasp_pose, const geometry_msgs::Vector3& approach);
 
+  bool pickGently(const geometry_msgs::Pose& grasp_pose, const geometry_msgs::Vector3& approach);
+
   int place(const geometry_msgs::Pose& pose);
 
   void openGripper();
+
+  bool openGripperGently();
+
+  bool closeGripperGently();
 
 private:
 
@@ -41,6 +54,9 @@ private:
   boost::shared_ptr<ros::AsyncSpinner> async_spinner_ptr_;
   boost::shared_ptr<moveit::planning_interface::MoveGroup> group_ptr_;
   boost::shared_ptr<moveit::planning_interface::MoveGroup> right_gripper_ptr_;
+
+  boost::shared_ptr<GrabClient> grab_client_ptr_;
+  boost::shared_ptr<ReleaseClient> release_client_ptr_;
 
 };
 

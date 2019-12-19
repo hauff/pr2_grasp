@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
 
   moveit_ros_planning_interface
+  pr2_gripper_sensor_action
 )
 
 find_package(Eigen REQUIRED)

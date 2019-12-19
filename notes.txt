@@ -8,8 +8,11 @@ roslaunch gpd tutorial1.launch
 
 ```
 roslaunch planning_scene_manager add_collision_box.launch
-rosrun table_detection table_detection_node
-rosrun pr2_grasp pr2_grasp_node
+#rosrun table_detection table_detection_node _topic_in:=/camera/depth_registered/points
+#rosrun pr2_grasp pr2_grasp_node
+
+roslaunch table_detection table_detection.launch topic_in:=/camera/depth_registered/points
+roslaunch pr2_grasp grasp_demo.launch topic_in:=/camera/depth_registered/points
 ```
 
 ```
